@@ -77,7 +77,17 @@ export function Footer() {
       <div className="border-t border-border">
         <div className="container flex flex-col items-center justify-between gap-2 py-6 text-caption text-ink-subtle md:flex-row">
           <p>© {new Date().getFullYear()} Owo Marketplace. Tous droits réservés.</p>
-          <p>Fait avec ♥ au Bénin</p>
+          <p>
+            Développé par{" "}
+            <a
+              href="https://codelab.bj/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+            >
+              codelabbj
+            </a>
+          </p>
         </div>
       </div>
     </footer>
