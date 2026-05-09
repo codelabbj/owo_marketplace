@@ -109,6 +109,10 @@ notification `aria-live`.
 - En cas de 5xx côté backend réel, l'app dégrade gracieusement vers les mocks
   pour préserver l'expérience.
 
+> **Pour l'équipe backend** : le contrat exact (endpoints, schémas JSON,
+> codes HTTP, CORS, cache, WhatsApp E164…) est documenté dans
+> [`docs/BACKEND_API_CONTRACT.md`](docs/BACKEND_API_CONTRACT.md).
+
 ## Tests
 
 ```bash

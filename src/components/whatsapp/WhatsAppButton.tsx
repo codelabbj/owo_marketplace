@@ -44,7 +44,7 @@ export function WhatsAppButton({
   const text = buildWhatsAppMessage(message);
   const url = buildWhatsAppUrl({ phoneE164, whatsappUrl, message: text });
 
-  const openWhatsApp = useCallback(() => {
+  const handleClick = useCallback(() => {
     if (!url) {
       setFallbackOpen(true);
       setErrorMsg("Impossible d'ouvrir WhatsApp");
@@ -52,15 +52,14 @@ export function WhatsAppButton({
     }
     setLoading(true);
     setErrorMsg(null);
+    window.setTimeout(() => setLoading(false), 800);
+  }, [url]);
+
+  const retryOpen = useCallback(() => {
+    if (!url) return;
     try {
-      const opened = window.open(url, "_blank", "noopener,noreferrer");
-      if (!opened) {
-        // popup blocked — try direct navigation
-        window.location.href = url;
-      }
-      window.setTimeout(() => setLoading(false), 600);
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch {
-      setLoading(false);
       setFallbackOpen(true);
       setErrorMsg("Impossible d'ouvrir WhatsApp");
     }
@@ -103,11 +102,12 @@ export function WhatsAppButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openWhatsApp}
-        disabled={loading}
-        aria-busy={loading}
+      <a
+        href={url ?? "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleClick}
+        aria-label={label}
         className={cn(
           "btn-whatsapp",
           sizeClass,
@@ -126,7 +126,7 @@ export function WhatsAppButton({
             {label}
           </>
         )}
-      </button>
+      </a>
       <span aria-live="polite" className="sr-only">
         {errorMsg ?? ""}
       </span>
@@ -137,7 +137,7 @@ export function WhatsAppButton({
         onClose={() => setFallbackOpen(false)}
         onRetry={() => {
           setFallbackOpen(false);
-          openWhatsApp();
+          retryOpen();
         }}
       />
     </>
