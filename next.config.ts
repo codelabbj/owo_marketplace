@@ -8,9 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "**" },
     ],
   },
-  experimental: {
-    typedRoutes: false,
-  },
+  typedRoutes: false,
 };
 
 export default nextConfig;
