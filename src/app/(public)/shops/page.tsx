@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
 };
 
-type SearchParams = Promise<{ query?: string; category?: string }>;
+type SearchParams = Promise<{ query?: string }>;
 
 export default async function ShopsPage({
   searchParams,
@@ -18,10 +18,5 @@ export default async function ShopsPage({
   searchParams: SearchParams;
 }) {
   const sp = await searchParams;
-  return (
-    <ShopsBrowser
-      initialQuery={sp.query ?? ""}
-      initialCategory={sp.category ?? ""}
-    />
-  );
+  return <ShopsBrowser initialQuery={sp.query ?? ""} />;
 }

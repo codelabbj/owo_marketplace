@@ -5,7 +5,6 @@ import { listShops } from "@/lib/api/shops";
 
 export type UseShopsParams = {
   query?: string;
-  category?: string;
   page?: number;
 };
 

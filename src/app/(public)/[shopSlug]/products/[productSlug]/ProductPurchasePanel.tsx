@@ -102,6 +102,8 @@ export function ProductPurchasePanel({
         <WhatsAppButton
           fullWidth
           size="lg"
+          shopSlug={product.shop.slug}
+          productSlug={product.slug}
           phoneE164={product.shop.whatsappPhoneE164}
           whatsappUrl={product.shop.whatsappUrl}
           disabled={ctaDisabled}

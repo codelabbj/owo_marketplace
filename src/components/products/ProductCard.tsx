@@ -80,6 +80,8 @@ export function ProductCard({
         <WhatsAppButton
           fullWidth
           size="sm"
+          shopSlug={shopSlug}
+          productSlug={product.slug}
           phoneE164={whatsappPhoneE164}
           whatsappUrl={whatsappUrl}
           message={{

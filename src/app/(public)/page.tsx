@@ -103,7 +103,7 @@ export default async function HomePage() {
           {MOCK_CATEGORIES.map((cat) => (
             <Link
               key={cat.slug}
-              href={`/shops?category=${cat.slug}`}
+              href={`/shops?query=${encodeURIComponent(cat.label)}`}
               className="card flex items-center justify-between gap-2 p-4 text-body font-medium text-ink hover:border-brand-500"
             >
               {cat.label}

@@ -9,24 +9,15 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { toShopSummary } from "@/lib/api/mappers";
-import { MOCK_CATEGORIES } from "@/lib/api/mocks";
 
 type SortKey = "popular" | "newest" | "alpha";
 
-export function ShopsBrowser({
-  initialQuery = "",
-  initialCategory = "",
-}: {
-  initialQuery?: string;
-  initialCategory?: string;
-}) {
+export function ShopsBrowser({ initialQuery = "" }: { initialQuery?: string }) {
   const [query, setQuery] = useState(initialQuery);
-  const [category, setCategory] = useState(initialCategory);
   const [sort, setSort] = useState<SortKey>("popular");
 
   const { data, isLoading, isError, refetch, isFetching } = useShops({
     query,
-    category,
     page: 1,
   });
 
@@ -39,7 +30,7 @@ export function ShopsBrowser({
     return sorted;
   }, [data, sort]);
 
-  const hasFilters = Boolean(query || category);
+  const hasSearch = Boolean(query.trim());
 
   return (
     <div className="container py-8">
@@ -59,24 +50,7 @@ export function ShopsBrowser({
             ariaLabel="Recherche boutique"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-row md:items-center">
-          <label className="sr-only" htmlFor="cat">
-            Catégorie
-          </label>
-          <select
-            id="cat"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="input h-10 px-3"
-          >
-            <option value="">Toutes catégories</option>
-            {MOCK_CATEGORIES.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:flex-row md:items-center">
           <label className="sr-only" htmlFor="sort">
             Tri
           </label>
@@ -91,15 +65,8 @@ export function ShopsBrowser({
             <option value="alpha">A → Z</option>
           </select>
 
-          {hasFilters ? (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                setCategory("");
-              }}
-              className="btn-ghost h-10"
-            >
+          {hasSearch ? (
+            <button type="button" onClick={() => setQuery("")} className="btn-ghost h-10">
               Réinitialiser
             </button>
           ) : null}
@@ -115,21 +82,14 @@ export function ShopsBrowser({
           <EmptyState
             title="Aucune boutique"
             description={
-              hasFilters
-                ? "Essayez d'élargir votre recherche."
+              hasSearch
+                ? "Essayez un autre mot-clé ou parcourez toutes les boutiques."
                 : "Aucune boutique pour le moment."
             }
             action={
-              hasFilters ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setCategory("");
-                  }}
-                  className="btn-primary"
-                >
-                  Effacer les filtres
+              hasSearch ? (
+                <button type="button" onClick={() => setQuery("")} className="btn-primary">
+                  Effacer la recherche
                 </button>
               ) : (
                 <Link href="/" className="btn-primary">

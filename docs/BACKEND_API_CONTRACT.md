@@ -5,8 +5,10 @@
 > schémas JSON, contraintes, codes HTTP, comportements attendus.
 
 **Source de vérité côté frontend** : les schémas Zod
-[`src/schemas/shop.schema.ts`](../src/schemas/shop.schema.ts) et
-[`src/schemas/product.schema.ts`](../src/schemas/product.schema.ts).
+[`src/schemas/shop.schema.ts`](../src/schemas/shop.schema.ts),
+[`src/schemas/product.schema.ts`](../src/schemas/product.schema.ts) et
+[`src/schemas/contact-intent.schema.ts`](../src/schemas/contact-intent.schema.ts)
+(corps du `POST` trace contact / WhatsApp).
 Le frontend **valide chaque réponse** avec ces schémas avant de l'utiliser.
 Si un champ requis manque ou a un mauvais type, la requête est rejetée côté
 client.
@@ -20,32 +22,36 @@ client.
 3. [Endpoint 1 — Liste des boutiques](#4-endpoint-1--get-apimarketplaceshops)
 4. [Endpoint 2 — Détail boutique + catalogue](#5-endpoint-2--get-apimarketplaceshopsslug)
 5. [Endpoint 3 — Détail produit](#6-endpoint-3--get-apimarketplaceshopsshopslugproductsproductslug)
-6. [Schémas de référence](#7-schémas-de-référence)
-7. [Contrat WhatsApp](#8-contrat-whatsapp)
-8. [Pagination](#9-pagination)
-9. [Codes HTTP & erreurs](#10-codes-http--erreurs)
-10. [Cache HTTP recommandé](#11-cache-http-recommandé)
-11. [Sécurité](#12-sécurité)
-12. [Champs critiques — explications métier](#13-champs-critiques--explications-métier)
-13. [Activation côté frontend](#14-activation-côté-frontend)
-14. [Endpoints optionnels (V2)](#15-endpoints-optionnels-v2)
-15. [Checklist de mise en production](#16-checklist-de-mise-en-production)
+6. [Endpoint 4 — Intention de contact WhatsApp](#66-post-apimarketplacecontact-intents)
+7. [Schémas de référence](#7-schémas-de-référence)
+8. [Contrat WhatsApp](#8-contrat-whatsapp)
+9. [Pagination](#9-pagination)
+10. [Codes HTTP & erreurs](#10-codes-http--erreurs)
+11. [Cache HTTP recommandé](#11-cache-http-recommandé)
+12. [Sécurité](#12-sécurité)
+13. [Champs critiques — explications métier](#13-champs-critiques--explications-métier)
+14. [Activation côté frontend](#14-activation-côté-frontend)
+15. [Endpoints optionnels (V2)](#15-endpoints-optionnels-v2)
+16. [Checklist de mise en production](#16-checklist-de-mise-en-production)
 
 ---
 
 ## 2. Vue d'ensemble
 
-Le frontend Next.js a besoin de **3 endpoints publics** (lecture seule, sans
-auth) pour faire fonctionner la marketplace en production :
+Le frontend Next.js a besoin de **trois endpoints publics en lecture** (sans auth)
+et d'**un endpoint public en écriture** (trace contact) pour la marketplace en
+production :
 
 | # | Méthode | Endpoint | Utilisé par |
 |---|---------|----------|-------------|
 | 1 | `GET` | `/api/marketplace/shops` | Page d'accueil (vedettes, suggestions search), page `/shops` (listing) |
 | 2 | `GET` | `/api/marketplace/shops/{slug}` | Page boutique `/{shopSlug}` (header + catalogue) |
 | 3 | `GET` | `/api/marketplace/shops/{shopSlug}/products/{productSlug}` | Fiche produit `/{shopSlug}/products/{productSlug}` |
+| 4 | `POST` | `/api/marketplace/contact-intents` | CTA **Commander sur WhatsApp** (carte produit, fiche produit) : enregistrement trace **avant** ouverture WhatsApp |
 
-Pas de POST, pas de PUT, pas de DELETE côté visiteur. **Aucune authentification
-côté visiteur**. Aucun panier, aucun checkout.
+Pas d'authentification visiteur, pas de panier, pas de checkout. Le `POST`
+n°4 ne crée pas de compte : il enregistre une intention liée au contexte
+produit + message prérempli + coordonnées acheteur (cf. §6.6).
 
 ---
 
@@ -76,12 +82,17 @@ côté visiteur**. Aucun panier, aucun checkout.
 Liste paginée des boutiques. Utilisé pour le listing `/shops`, les sections
 "vedettes" de l'accueil, et la recherche globale.
 
+> **Catégories (erratum)** : le champ `category` **n'existe plus** sur une boutique
+> (réponse liste et détail). Une boutique peut vendre des produits de catégories
+> différentes. La catégorie canonique s'applique aux **produits** uniquement
+> (`GET /api/marketplace/categories/`). Voir
+> [`FRONTEND_MARKETPLACE_CATEGORY_CHANGES.md`](./FRONTEND_MARKETPLACE_CATEGORY_CHANGES.md).
+
 ### 4.1 Query parameters
 
 | Param | Type | Obligatoire | Défaut | Notes |
 |-------|------|-------------|--------|-------|
 | `query` | string | non | — | Recherche full-text sur `name` + `short_description`. Min 1 char. |
-| `category` | string | non | — | Slug de catégorie (cf. §15). |
 | `page` | int ≥ 1 | non | `1` | Pagination. |
 | `page_size` | int 1..50 | non | `12` | Optionnel — la valeur par défaut serveur fait foi. Frontend par défaut : 12. |
 
@@ -101,7 +112,6 @@ Liste paginée des boutiques. Utilisé pour le listing `/shops`, les sections
       "cover_url": "https://cdn.owo.bj/shops/didier/cover.jpg",
       "short_description": "Mode urbaine, accessoires & sneakers à Cotonou.",
       "products_count": 14,
-      "category": "mode",
       "city": "Cotonou"
     }
   ]
@@ -119,7 +129,6 @@ Liste paginée des boutiques. Utilisé pour le listing `/shops`, les sections
 | `cover_url` | string\|null | non | URL HTTPS absolue d'une image bannière recommandée ≥ 1200×400. |
 | `short_description` | string\|null | non | Max ~160 caractères recommandé (clamp 2 lignes UI). |
 | `products_count` | int ≥ 0 | non (défaut 0) | Nombre total de produits **publiés** (filtre `published=true` côté backend). |
-| `category` | string\|null | non | Slug de catégorie (cf. §15). |
 | `city` | string\|null | non | Ville de la boutique (affichée en meta UI). |
 
 ### 4.4 Comportement attendu
@@ -319,6 +328,42 @@ Fiche produit complète.
 
 ---
 
+## 6.6 `POST /api/marketplace/contact-intents`
+
+Lorsqu'un visiteur sans compte clique sur **Commander sur WhatsApp**, le
+frontend envoie d'abord ce `POST`, puis ouvre WhatsApp (nouvel onglet) avec le
+même texte que `prefilled_message`. Les coordonnées acheteur (prénom, nom,
+téléphone) sont saisies une fois puis conservées dans le **navigateur**
+(`localStorage`) ; elles ne sont envoyées au backend qu'à cette étape.
+
+**Auth** : aucune. **CORS** : l'API doit accepter `POST` + en-têtes JSON depuis
+l'origine du site marketplace.
+
+### 6.6.1 Corps JSON (`Content-Type: application/json`)
+
+| Champ | Type | Obligatoire | Notes |
+|-------|------|-------------|--------|
+| `first_name` | string (1–80) | **oui** | |
+| `last_name` | string (1–80) | **oui** | |
+| `phone_e164` | string | **oui** | **Chiffres uniquement**, longueur 6–15 (indicatif pays inclus, sans préfixe `+`). Aligné sur `whatsapp_phone_e164` boutique. |
+| `shop_slug` | string | **oui** | |
+| `product_slug` | string | **oui** | |
+| `prefilled_message` | string | **oui** | Corps du message WhatsApp (UTF-8), identique à celui encodé dans l'URL `text`. |
+| `product_url` | string (URL absolue) | **oui** | Lien public vers la fiche produit sur la marketplace. |
+
+### 6.6.2 Réponses attendues
+
+- **`200 OK`** ou **`201 Created`** ou **`204 No Content`** : succès. Corps
+  JSON optionnel (ex. `{ "id": "…" }` si vous exposez un identifiant de trace).
+- **`400 Bad Request`** : corps de validation (format libre côté serveur).
+- **`429 Too Many Requests`** : limitation ; le frontend affiche une erreur
+  générique et l'utilisateur peut réessayer.
+
+En cas d'erreur **5xx** ou réseau, le frontend **n'ouvre pas** WhatsApp et
+affiche un message invitant à réessayer.
+
+---
+
 ## 7. Schémas de référence
 
 > Ces schémas sont la traduction directe des Zod schemas frontend. Chacun est
@@ -335,7 +380,6 @@ Fiche produit complète.
   "cover_url": "string|null",
   "short_description": "string|null",
   "products_count": "integer >= 0",
-  "category": "string|null",
   "city": "string|null"
 }
 ```
@@ -662,23 +706,17 @@ Le frontend appellera alors les endpoints sur `NEXT_PUBLIC_MARKETPLACE_API_BASE_
 
 Pas requis pour le MVP, mais recommandés à terme :
 
-### 15.1 Catégories
+### 15.1 Catégories (produits uniquement)
 
-`GET /api/marketplace/categories`
+`GET /api/marketplace/categories/` (sans auth). Retourne typiquement un **tableau**
+`[{ "slug": "...", "label": "..." }, ...]` (format exact selon spec backend).
 
-```json
-{
-  "results": [
-    { "slug": "mode", "label": "Mode", "products_count": 245 },
-    { "slug": "bijoux", "label": "Bijoux", "products_count": 98 },
-    { "slug": "tech", "label": "Tech", "products_count": 156 }
-  ]
-}
-```
+- Les slugs valident le champ **`category` des produits** (création / édition vendeur, payload public produit si exposé).
+- **Aucun** champ `category` sur la boutique (`GET /shops/`, `GET /shops/{slug}/`).
 
-> Actuellement le frontend hardcode 6 catégories (`mode`, `bijoux`, `tech`,
-> `maison`, `beaute`, `alimentaire`). Quand cet endpoint sera dispo, on
-> branchera dynamiquement.
+> Les tuiles « catégories » sur l'accueil du frontend peuvent rediriger vers une
+> recherche texte (`/shops?query=…`) en attendant le branchement dynamique sur
+> cet endpoint.
 
 ### 15.2 Recherche globale (produits + boutiques)
 
@@ -688,7 +726,10 @@ Permet une recherche unifiée sur produits + boutiques.
 
 ### 15.3 Catalogue boutique paginé
 
-`GET /api/marketplace/shops/{slug}/products?page=&category=&sort=`
+`GET /api/marketplace/shops/{slug}/products?page=&sort=`
+
+(Si le backend supporte un filtre catalogue par catégorie produit, il peut
+exposer `category=` comme **slug canonique produit**, pas une catégorie boutique.)
 
 Si une boutique a >50 produits, retourner le catalogue paginé séparément du
 détail boutique.

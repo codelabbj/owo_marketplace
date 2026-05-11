@@ -1,0 +1,1519 @@
+# Backend API Requirements — POS, HR & Inventory Extensions
+
+> Document destiné à l'équipe backend.  
+> Le frontend pour ces 8 fonctionnalités est **déjà implémenté**. Ce document liste tous les endpoints nécessaires.
+
+---
+
+## Contexte
+
+Le frontend OwoDesk a été enrichi avec 8 nouvelles fonctionnalités critiques pour compléter l'offre POS retail :
+
+**🔴 Critique POS (4 fonctionnalités) :**
+1. **Session de caisse** — Ouverture/clôture avec fond de caisse, Z de caisse, envoi email
+2. **Annulation contrôlée** — Motif obligatoire, journal d'audit complet
+3. **Impression thermique** — Tickets 80mm avec CSS print, aperçu
+4. **Scan code-barres** — Lecteur USB/Bluetooth, détection automatique
+
+**🟡 Important (4 fonctionnalités) :**
+5. **Pointage employés** — Clock-in/out, saisie manuelle, export CSV
+6. **Pertes/Déchets/Casse** — 3 nouveaux types de mouvement (loss, waste, breakage)
+7. **Notifications temps réel** — WebSocket, panel dropdown, toasts, 9 types d'événements
+8. **Étiquetage QR/Code-barres** — Templates, CODE128/EAN13/QR, impression lot, historique
+
+---
+
+## Table des matières
+
+1. [POS Sessions](#1-pos-sessions)
+2. [POS Cancellations](#2-pos-cancellations)
+3. [HR Attendance](#3-hr-attendance)
+4. [Labels & Barcodes](#4-labels--barcodes)
+5. [Notifications WebSocket](#5-notifications-websocket)
+6. [Inventory Movements](#6-inventory-movements)
+7. [Résumé des endpoints](#résumé-des-endpoints)
+
+---
+
+## 1. POS Sessions
+
+### 1.1 Liste des sessions de caisse
+
+**Méthode :** `GET`  
+**URL :** `/api/pos/sessions/`  
+**Auth :** Oui (Bearer token)  
+**Org filter :** Oui (header `X-Current-Org-Id`)
+
+**Query params (optionnels) :**
+- `warehouse` — filtrer par entrepôt/magasin
+- `status` — filtrer par statut (`open` | `closed`)
+- `date_from` — filtrer par date d'ouverture (ISO date)
+- `date_to` — filtrer par date d'ouverture (ISO date)
+
+**Réponse attendue :**
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "session_number": "S-2026-001",
+      "warehouse": { "id": "uuid", "name": "Magasin Centre-Ville" },
+      "cashier": { "id": "uuid", "full_name": "Jean Dupont", "email": "jean@example.com" },
+      "status": "open",
+      "opening_float": "50000.00",
+      "closing_float": null,
+      "expected_cash": null,
+      "cash_difference": null,
+      "opened_at": "2026-04-27T08:00:00Z",
+      "closed_at": null,
+      "notes": "Ouverture matinale",
+      "total_sales": null,
+      "sales_count": null,
+      "total_cash": null,
+      "total_card": null,
+      "total_mobile_money": null
+    }
+  ]
+}
+```
+
+**Champs calculés (pour sessions fermées) :**
+- `total_sales` — somme des ventes de la session
+- `sales_count` — nombre de ventes
+- `total_cash`, `total_card`, `total_mobile_money` — totaux par méthode de paiement
+- `expected_cash` — `opening_float + total_cash`
+- `cash_difference` — `closing_float - expected_cash`
+
+---
+
+### 1.2 Session de caisse actuelle
+
+**Méthode :** `GET`  
+**URL :** `/api/pos/sessions/current/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Réponse :**
+- Si une session est ouverte pour le caissier connecté : retourner l'objet `PosSession`
+- Sinon : retourner `null` ou HTTP 404
+
+**Exemple :**
+```json
+{
+  "id": "uuid",
+  "session_number": "S-2026-001",
+  "warehouse": { "id": "uuid", "name": "Magasin Centre-Ville" },
+  "cashier": { "id": "uuid", "full_name": "Jean Dupont", "email": "jean@example.com" },
+  "status": "open",
+  "opening_float": "50000.00",
+  "closing_float": null,
+  "expected_cash": null,
+  "cash_difference": null,
+  "opened_at": "2026-04-27T08:00:00Z",
+  "closed_at": null,
+  "notes": null,
+  "total_sales": "125000.00",
+  "sales_count": 15,
+  "total_cash": "75000.00",
+  "total_card": "30000.00",
+  "total_mobile_money": "20000.00"
+}
+```
+
+---
+
+### 1.3 Ouvrir une session de caisse
+
+**Méthode :** `POST`  
+**URL :** `/api/pos/sessions/open/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "warehouse": "uuid",
+  "opening_float": "50000.00",
+  "notes": "Ouverture matinale"
+}
+```
+
+**Validations :**
+- Le caissier ne doit pas avoir de session ouverte
+- `opening_float` doit être >= 0
+- `warehouse` doit exister et appartenir à l'organisation
+
+**Réponse :** L'objet `PosSession` créé (voir format section 1.1)
+
+**Logique backend :**
+- Générer `session_number` auto-incrémenté (format `S-YYYY-NNN`)
+- `cashier` = utilisateur connecté
+- `status` = `"open"`
+- `opened_at` = timestamp actuel
+
+---
+
+### 1.4 Clôturer une session de caisse
+
+**Méthode :** `POST`  
+**URL :** `/api/pos/sessions/{id}/close/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "closing_float": "122000.00",
+  "notes": "Clôture fin de journée"
+}
+```
+
+**Validations :**
+- La session doit être `open`
+- Seul le caissier propriétaire ou un admin peut clôturer
+- `closing_float` doit être >= 0
+
+**Réponse :** L'objet `PosSession` mis à jour avec :
+- `status` = `"closed"`
+- `closed_at` = timestamp actuel
+- `closing_float` = valeur fournie
+- `expected_cash` = `opening_float + total_cash`
+- `cash_difference` = `closing_float - expected_cash`
+
+**Logique backend :**
+- Calculer tous les KPIs (`total_sales`, `sales_count`, `total_cash`, etc.)
+- Marquer la session comme fermée
+- Créer une entrée d'audit (journal immuable)
+
+---
+
+### 1.5 Z de caisse (rapport détaillé)
+
+**Méthode :** `GET`  
+**URL :** `/api/pos/sessions/{id}/z-report/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Réponse :**
+```json
+{
+  "session": {
+    "id": "uuid",
+    "session_number": "S-2026-001",
+    "warehouse": { "id": "uuid", "name": "Magasin Centre-Ville" },
+    "cashier": { "id": "uuid", "full_name": "Jean Dupont", "email": "jean@example.com" },
+    "status": "closed",
+    "opening_float": "50000.00",
+    "closing_float": "122000.00",
+    "expected_cash": "125000.00",
+    "cash_difference": "-3000.00",
+    "opened_at": "2026-04-27T08:00:00Z",
+    "closed_at": "2026-04-27T18:00:00Z",
+    "notes": "Clôture fin de journée",
+    "total_sales": "125000.00",
+    "sales_count": 15,
+    "total_cash": "75000.00",
+    "total_card": "30000.00",
+    "total_mobile_money": "20000.00"
+  },
+  "sales_by_payment": [
+    { "method": "cash", "count": 8, "total": "75000.00" },
+    { "method": "card", "count": 5, "total": "30000.00" },
+    { "method": "mobile_money", "count": 2, "total": "20000.00" }
+  ],
+  "top_products": [
+    { "product_name": "Coca-Cola 50cl", "qty": 25, "total": "12500.00" },
+    { "product_name": "Pain complet", "qty": 18, "total": "9000.00" },
+    { "product_name": "Lait 1L", "qty": 12, "total": "8400.00" }
+  ],
+  "cancelled_sales_count": 2,
+  "cancelled_sales_total": "5000.00"
+}
+```
+
+**Logique backend :**
+- Agréger les ventes par méthode de paiement
+- Top 10 produits vendus (par quantité ou CA)
+- Compter les ventes annulées pendant la session
+
+---
+
+### 1.6 Envoyer le rapport par email
+
+**Méthode :** `POST`  
+**URL :** `/api/pos/sessions/{id}/send-report-email/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :** `{}` (vide)
+
+**Réponse :**
+```json
+{
+  "sent": true
+}
+```
+
+**Logique backend :**
+- Générer le Z de caisse (voir section 1.5)
+- Envoyer par email au caissier + manager + propriétaire (selon config org)
+- Format email : HTML avec tableau récapitulatif
+
+---
+
+## 2. POS Cancellations
+
+### 2.1 Liste des annulations
+
+**Méthode :** `GET`  
+**URL :** `/api/pos/cancellations/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Query params (optionnels) :**
+- `date_from` — filtrer par date d'annulation
+- `date_to` — filtrer par date d'annulation
+- `cancelled_by` — filtrer par utilisateur
+
+**Réponse :**
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "sale": "uuid",
+      "sale_number": "V-2026-042",
+      "reason": "Client a changé d'avis",
+      "cancelled_by": { "id": "uuid", "full_name": "Manager Dupont", "email": "manager@example.com" },
+      "cancelled_at": "2026-04-27T14:30:00Z",
+      "original_total": "15000.00"
+    }
+  ]
+}
+```
+
+---
+
+### 2.2 Annuler une vente
+
+**Méthode :** `POST`  
+**URL :** `/api/pos/sales/{id}/cancel/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "reason": "Client a changé d'avis"
+}
+```
+
+**Validations :**
+- `reason` est obligatoire (min 10 caractères)
+- La vente ne doit pas déjà être annulée
+- Seul un manager/admin peut annuler (pas le caissier simple)
+
+**Réponse :** L'objet `PosCancellation` créé (voir format section 2.1)
+
+**Logique backend :**
+- Créer une entrée `PosCancellation`
+- Marquer la vente comme annulée (`status = "cancelled"`)
+- Restaurer le stock si nécessaire
+- Créer une entrée d'audit immuable
+- **Ne jamais supprimer la vente** — elle reste visible avec badge "Annulée"
+
+---
+
+## 3. HR Attendance
+
+### 3.1 Liste des pointages
+
+**Méthode :** `GET`  
+**URL :** `/api/hr/attendance/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Query params (optionnels) :**
+- `employee` — filtrer par employé (UUID)
+- `date_from` — filtrer par date (ISO date YYYY-MM-DD)
+- `date_to` — filtrer par date (ISO date YYYY-MM-DD)
+
+**Réponse :**
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "employee": {
+        "id": "uuid",
+        "first_name": "Jean",
+        "last_name": "Dupont",
+        "employee_number": "EMP-001"
+      },
+      "date": "2026-04-27",
+      "clock_in": "2026-04-27T08:05:00Z",
+      "clock_out": "2026-04-27T17:30:00Z",
+      "status": "present",
+      "worked_hours": "9.42",
+      "notes": null
+    }
+  ]
+}
+```
+
+**Statuts possibles :**
+- `present` — présent toute la journée
+- `absent` — absent
+- `late` — arrivée en retard (> 15 min après heure prévue)
+- `half_day` — demi-journée
+
+---
+
+### 3.2 Clock-in (pointage d'arrivée)
+
+**Méthode :** `POST`  
+**URL :** `/api/hr/attendance/clock-in/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "employee": "uuid",
+  "notes": "Arrivée matinale"
+}
+```
+
+**Validations :**
+- L'employé ne doit pas avoir de pointage ouvert pour aujourd'hui
+- `employee` doit exister et appartenir à l'organisation
+
+**Réponse :** L'objet `AttendanceRecord` créé avec :
+- `date` = date du jour
+- `clock_in` = timestamp actuel
+- `clock_out` = `null`
+- `status` = calculé automatiquement (`present` ou `late` selon l'heure)
+- `worked_hours` = `null` (calculé au clock-out)
+
+---
+
+### 3.3 Clock-out (pointage de sortie)
+
+**Méthode :** `POST`  
+**URL :** `/api/hr/attendance/{id}/clock-out/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "notes": "Fin de journée"
+}
+```
+
+**Validations :**
+- Le pointage doit exister et avoir un `clock_in`
+- `clock_out` doit être `null` (pas déjà pointé)
+
+**Réponse :** L'objet `AttendanceRecord` mis à jour avec :
+- `clock_out` = timestamp actuel
+- `worked_hours` = différence en heures décimales (ex: `"9.42"`)
+
+**Logique backend :**
+```python
+worked_hours = (clock_out - clock_in).total_seconds() / 3600
+worked_hours = round(worked_hours, 2)
+```
+
+---
+
+### 3.4 Saisie manuelle (correction)
+
+**Méthode :** `POST`  
+**URL :** `/api/hr/attendance/`  
+**Auth :** Oui (réservé aux managers/RH)  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "employee": "uuid",
+  "date": "2026-04-26",
+  "clock_in": "2026-04-26T08:00:00Z",
+  "clock_out": "2026-04-26T17:00:00Z",
+  "status": "present",
+  "notes": "Correction manuelle - oubli de pointage"
+}
+```
+
+**Validations :**
+- Seuls les managers/RH peuvent créer des pointages manuels
+- `date` ne doit pas être dans le futur
+- Si `clock_in` et `clock_out` sont fournis, calculer `worked_hours`
+
+**Réponse :** L'objet `AttendanceRecord` créé
+
+---
+
+### 3.5 Modifier un pointage
+
+**Méthode :** `PATCH`  
+**URL :** `/api/hr/attendance/{id}/`  
+**Auth :** Oui (réservé aux managers/RH)  
+**Org filter :** Oui
+
+**Body :** Champs partiels à modifier
+
+**Exemple :**
+```json
+{
+  "clock_out": "2026-04-27T18:00:00Z",
+  "notes": "Correction heure de sortie"
+}
+```
+
+**Réponse :** L'objet `AttendanceRecord` mis à jour
+
+---
+
+### 3.6 Supprimer un pointage
+
+**Méthode :** `DELETE`  
+**URL :** `/api/hr/attendance/{id}/`  
+**Auth :** Oui (réservé aux managers/RH)  
+**Org filter :** Oui
+
+**Réponse :** HTTP 204 No Content
+
+---
+
+### 3.7 Résumé de présence (période)
+
+**Méthode :** `GET`  
+**URL :** `/api/hr/attendance/summary/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Query params (requis) :**
+- `date_from` — date de début (ISO date)
+- `date_to` — date de fin (ISO date)
+- `employee` (optionnel) — filtrer par employé
+
+**Réponse :**
+```json
+{
+  "results": [
+    {
+      "employee_id": "uuid",
+      "employee_name": "Jean Dupont",
+      "period_start": "2026-04-01",
+      "period_end": "2026-04-30",
+      "present_days": 20,
+      "absent_days": 2,
+      "late_days": 3,
+      "total_worked_hours": "168.50"
+    }
+  ]
+}
+```
+
+**Logique backend :**
+- Agréger les pointages par employé sur la période
+- Compter les jours par statut
+- Sommer les heures travaillées
+
+---
+
+## 4. Labels & Barcodes
+
+### 4.1 Liste des templates d'étiquettes
+
+**Méthode :** `GET`  
+**URL :** `/api/labels/templates/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Réponse :**
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "name": "Étiquette prix standard",
+      "format": "40x30",
+      "width_mm": 40,
+      "height_mm": 30,
+      "show_price": true,
+      "show_sku": true,
+      "show_name": true,
+      "show_lot": false,
+      "show_expiry": false,
+      "barcode_format": "EAN13",
+      "is_default": true
+    }
+  ]
+}
+```
+
+**Formats disponibles :**
+- `40x30` — 40mm × 30mm
+- `50x30` — 50mm × 30mm
+- `60x40` — 60mm × 40mm
+- `custom` — dimensions personnalisées
+
+**Formats de code-barres :**
+- `EAN13` — code-barres EAN-13 (13 chiffres)
+- `CODE128` — code-barres Code 128 (alphanumérique)
+- `QR` — QR Code
+
+---
+
+### 4.2 Créer un template
+
+**Méthode :** `POST`  
+**URL :** `/api/labels/templates/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "name": "Étiquette alimentaire",
+  "format": "50x30",
+  "width_mm": 50,
+  "height_mm": 30,
+  "show_price": true,
+  "show_sku": true,
+  "show_name": true,
+  "show_lot": true,
+  "show_expiry": true,
+  "barcode_format": "CODE128",
+  "is_default": false
+}
+```
+
+**Réponse :** L'objet `LabelTemplate` créé
+
+---
+
+### 4.3 Modifier un template
+
+**Méthode :** `PATCH`  
+**URL :** `/api/labels/templates/{id}/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :** Champs partiels à modifier
+
+**Réponse :** L'objet `LabelTemplate` mis à jour
+
+---
+
+### 4.4 Supprimer un template
+
+**Méthode :** `DELETE`  
+**URL :** `/api/labels/templates/{id}/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Réponse :** HTTP 204 No Content
+
+---
+
+### 4.5 Historique des impressions
+
+**Méthode :** `GET`  
+**URL :** `/api/labels/print-jobs/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Query params (optionnels) :**
+- `product` — filtrer par produit (UUID)
+- `date_from` — filtrer par date d'impression
+- `date_to` — filtrer par date d'impression
+
+**Réponse :**
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "template": { "id": "uuid", "name": "Étiquette prix standard" },
+      "product": { "id": "uuid", "sku": "PROD-001", "name": "Coca-Cola 50cl" },
+      "variant_id": null,
+      "quantity": 50,
+      "printed_by": { "id": "uuid", "full_name": "Jean Dupont", "email": "jean@example.com" },
+      "printed_at": "2026-04-27T10:30:00Z",
+      "barcode_value": "1234567890123",
+      "pdf_url": "/media/labels/print-job-uuid.pdf"
+    }
+  ]
+}
+```
+
+---
+
+### 4.6 Imprimer une étiquette (produit unique)
+
+**Méthode :** `POST`  
+**URL :** `/api/labels/print-jobs/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "template_id": "uuid",
+  "product_id": "uuid",
+  "variant_id": null,
+  "quantity": 10
+}
+```
+
+**Réponse :** L'objet `LabelPrintJob` créé avec :
+- `barcode_value` = SKU du produit (ou code EAN si disponible)
+- `pdf_url` = URL du PDF généré (pour impression thermique)
+
+**Logique backend :**
+- Générer le code-barres selon le format du template
+- Créer un PDF avec les étiquettes (répétées `quantity` fois)
+- Stocker le PDF dans `/media/labels/`
+- Créer l'entrée d'historique
+
+---
+
+### 4.7 Imprimer en lot (par catégorie, arrivage, inventaire)
+
+**Méthode :** `POST`  
+**URL :** `/api/labels/print-jobs/batch/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "template_id": "uuid",
+  "items": [
+    { "product_id": "uuid-1", "variant_id": null, "quantity": 10 },
+    { "product_id": "uuid-2", "variant_id": null, "quantity": 5 },
+    { "product_id": "uuid-3", "variant_id": "uuid-var", "quantity": 20 }
+  ]
+}
+```
+
+**Réponse :**
+```json
+{
+  "jobs": [
+    { "id": "uuid-1", "product": {...}, "quantity": 10, ... },
+    { "id": "uuid-2", "product": {...}, "quantity": 5, ... },
+    { "id": "uuid-3", "product": {...}, "quantity": 20, ... }
+  ],
+  "pdf_url": "/media/labels/batch-uuid.pdf"
+}
+```
+
+**Logique backend :**
+- Créer un `LabelPrintJob` pour chaque item
+- Générer un seul PDF consolidé avec toutes les étiquettes
+- Retourner la liste des jobs + l'URL du PDF
+
+---
+
+### 4.8 Réimprimer une étiquette
+
+**Méthode :** `POST`  
+**URL :** `/api/labels/print-jobs/{id}/reprint/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :** `{}` (vide)
+
+**Réponse :** Un nouvel objet `LabelPrintJob` créé (copie de l'original)
+
+**Logique backend :**
+- Dupliquer le job existant
+- Générer un nouveau PDF
+- Créer une nouvelle entrée d'historique
+
+---
+
+### 4.9 Générer un code-barres (preview)
+
+**Méthode :** `POST`  
+**URL :** `/api/labels/generate/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body :**
+```json
+{
+  "value": "1234567890123",
+  "format": "EAN13",
+  "width": 200,
+  "height": 100
+}
+```
+
+**Réponse :**
+```json
+{
+  "svg": "<svg>...</svg>",
+  "png_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
+}
+```
+
+**Logique backend :**
+- Générer le code-barres avec une bibliothèque (ex: `python-barcode`, `qrcode`)
+- Retourner le SVG et le PNG en base64 (pour preview frontend)
+
+---
+## 5. Notifications WebSocket
+
+### 5.1 Connexion WebSocket
+
+**URL :** `/ws/notifications/`  
+**Protocole :** WebSocket  
+**Auth :** Query param `token` (JWT) + `org_id`
+
+**URL complète :**
+```
+ws://backend.example.com/ws/notifications/?token=<jwt_token>&org_id=<uuid>
+```
+
+**Logique backend :**
+- Valider le JWT dans le query param
+- Valider que l'utilisateur appartient à l'organisation
+- Maintenir la connexion WebSocket ouverte
+- Envoyer les notifications en temps réel à tous les clients connectés de l'organisation
+
+---
+
+### 5.2 Format des messages
+
+Chaque notification envoyée via WebSocket suit ce format :
+
+```json
+{
+  "id": "uuid",
+  "type": "pos_sale_completed",
+  "title": "Nouvelle vente",
+  "message": "Vente V-2026-042 : 15 000 FCFA",
+  "payload": {
+    "sale_id": "uuid",
+    "sale_number": "V-2026-042",
+    "total": "15000.00"
+  },
+  "created_at": "2026-04-27T14:30:00Z",
+  "read": false
+}
+```
+
+---
+
+### 5.3 Types de notifications
+
+| Type | Déclencheur | Payload |
+|------|-------------|---------|
+| `pos_sale_completed` | Vente POS finalisée | `{ sale_id, sale_number, total }` |
+| `pos_sale_cancelled` | Vente annulée | `{ sale_id, sale_number, reason }` |
+| `pos_session_closed` | Session de caisse clôturée | `{ session_id, session_number, cash_difference }` |
+| `stock_low` | Stock sous le seuil d'alerte | `{ product_id, product_name, current_qty, min_qty }` |
+| `stock_out` | Rupture de stock | `{ product_id, product_name }` |
+| `cash_difference` | Écart de caisse > seuil | `{ session_id, difference }` |
+| `new_ecommerce_order` | Nouvelle commande e-commerce | `{ order_id, order_number, total }` |
+| `hr_clock_in` | Employé pointé (arrivée) | `{ employee_id, employee_name, time }` |
+| `hr_clock_out` | Employé pointé (sortie) | `{ employee_id, employee_name, time, worked_hours }` |
+
+---
+
+### 5.4 Reconnexion automatique
+
+Le client frontend gère la reconnexion automatique :
+- Si la connexion WebSocket se ferme, le client attend 5 secondes puis reconnecte
+- Le backend doit accepter les reconnexions multiples du même utilisateur
+
+---
+
+### 5.5 Broadcast des notifications
+
+**Règles de diffusion :**
+- Une notification est envoyée à **tous les utilisateurs connectés de l'organisation**
+- Le backend doit maintenir une liste des connexions WebSocket par organisation
+- Quand un événement se produit, broadcaster à tous les clients de l'org
+
+**Exemple d'implémentation (Django Channels) :**
+```python
+# Quand une vente est créée
+async_to_sync(channel_layer.group_send)(
+    f"org_{org_id}",
+    {
+        "type": "notification.send",
+        "notification": {
+            "id": str(notification.id),
+            "type": "pos_sale_completed",
+            "title": "Nouvelle vente",
+            "message": f"Vente {sale.number} : {sale.total} FCFA",
+            "payload": {"sale_id": str(sale.id), ...},
+            "created_at": notification.created_at.isoformat(),
+            "read": False
+        }
+    }
+)
+```
+
+---
+
+## 6. Inventory Movements
+
+### 6.1 Nouveaux types de mouvement
+
+Le frontend a ajouté 3 nouveaux types de mouvement de stock. Le backend doit les supporter dans l'endpoint existant `/api/inventory/movements/`.
+
+**Types existants :**
+- `in` — Entrée de stock (approvisionnement)
+- `out` — Sortie de stock (vente, transfert)
+- `adjustment` — Ajustement d'inventaire
+
+**Nouveaux types à ajouter :**
+- `loss` — Perte (vol, détérioration)
+- `waste` — Déchet (produit périmé, non vendable)
+- `breakage` — Casse (produit cassé, endommagé)
+
+---
+
+### 6.2 Modification de l'endpoint existant
+
+**Méthode :** `POST`  
+**URL :** `/api/inventory/movements/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body (exemple avec nouveau type) :**
+```json
+{
+  "product": "uuid",
+  "warehouse": "uuid",
+  "type": "loss",
+  "quantity": 5,
+  "reason": "Vol constaté lors de l'inventaire",
+  "reference": "INV-2026-042"
+}
+```
+
+**Validations :**
+- `type` doit être l'un des 6 types (`in`, `out`, `adjustment`, `loss`, `waste`, `breakage`)
+- Pour les types `loss`, `waste`, `breakage` : le champ `reason` est **obligatoire**
+- La quantité doit être > 0
+
+**Logique backend :**
+- Les types `loss`, `waste`, `breakage` sont traités comme des sorties de stock (diminuent le stock)
+- Créer une entrée d'audit pour traçabilité
+- Mettre à jour le stock du produit dans l'entrepôt
+
+---
+
+### 6.3 Filtrage par type
+
+L'endpoint `GET /api/inventory/movements/` doit supporter le filtrage par type :
+
+**Query params :**
+- `type` — filtrer par type de mouvement (peut être multiple : `?type=loss&type=waste`)
+
+**Exemple :**
+```
+GET /api/inventory/movements/?type=loss&type=waste&type=breakage
+```
+
+Retourne uniquement les mouvements de type perte, déchet ou casse.
+
+---
+
+## Résumé des endpoints
+
+| Priorité | Méthode | Endpoint | Description |
+|----------|---------|----------|-------------|
+| 🔴 | GET | `/api/pos/sessions/` | Liste des sessions de caisse |
+| 🔴 | GET | `/api/pos/sessions/current/` | Session actuelle du caissier |
+| 🔴 | POST | `/api/pos/sessions/open/` | Ouvrir une session |
+| 🔴 | POST | `/api/pos/sessions/{id}/close/` | Clôturer une session |
+| 🔴 | GET | `/api/pos/sessions/{id}/z-report/` | Z de caisse (rapport détaillé) |
+| 🟡 | POST | `/api/pos/sessions/{id}/send-report-email/` | Envoyer rapport par email |
+| 🔴 | GET | `/api/pos/cancellations/` | Liste des annulations |
+| 🔴 | POST | `/api/pos/sales/{id}/cancel/` | Annuler une vente |
+| 🔴 | GET | `/api/hr/attendance/` | Liste des pointages |
+| 🔴 | POST | `/api/hr/attendance/clock-in/` | Pointage d'arrivée |
+| 🔴 | POST | `/api/hr/attendance/{id}/clock-out/` | Pointage de sortie |
+| 🟡 | POST | `/api/hr/attendance/` | Saisie manuelle (correction) |
+| 🟡 | PATCH | `/api/hr/attendance/{id}/` | Modifier un pointage |
+| 🟡 | DELETE | `/api/hr/attendance/{id}/` | Supprimer un pointage |
+| 🟡 | GET | `/api/hr/attendance/summary/` | Résumé de présence (période) |
+| 🔴 | GET | `/api/labels/templates/` | Liste des templates d'étiquettes |
+| 🟡 | POST | `/api/labels/templates/` | Créer un template |
+| 🟡 | PATCH | `/api/labels/templates/{id}/` | Modifier un template |
+| 🟡 | DELETE | `/api/labels/templates/{id}/` | Supprimer un template |
+| 🔴 | GET | `/api/labels/print-jobs/` | Historique des impressions |
+| 🔴 | POST | `/api/labels/print-jobs/` | Imprimer une étiquette |
+| 🟡 | POST | `/api/labels/print-jobs/batch/` | Imprimer en lot |
+| 🟡 | POST | `/api/labels/print-jobs/{id}/reprint/` | Réimprimer une étiquette |
+| 🟡 | POST | `/api/labels/generate/` | Générer code-barres (preview) |
+| 🔴 | WS | `/ws/notifications/` | WebSocket notifications temps réel |
+| 🔴 | POST | `/api/inventory/movements/` | Créer mouvement (+ types loss/waste/breakage) |
+
+**Légende :**
+- 🔴 **Critique** — Fonctionnalité bloquante, à implémenter en priorité
+- 🟡 **Important** — Fonctionnalité secondaire, peut être implémentée après
+
+---
+
+## Notes générales d'implémentation
+
+### Authentification
+- Tous les endpoints REST utilisent JWT via header `Authorization: Bearer <token>`
+- Le WebSocket utilise JWT via query param `?token=<jwt_token>`
+
+### Filtrage par organisation
+- Tous les endpoints doivent filtrer par organisation via header `X-Current-Org-Id`
+- Le frontend envoie automatiquement ce header sur toutes les requêtes
+
+### Format des réponses
+- Les endpoints paginés peuvent retourner soit `[...]` soit `{ "results": [...] }` — les deux sont gérés
+- Les dates doivent être en format ISO 8601 : `"2026-04-27T14:30:00Z"`
+- Les prix/montants doivent être des strings numériques : `"15000.00"` (pas des entiers)
+
+### Audit et traçabilité
+- Créer des entrées d'audit immuables pour :
+  - Ouverture/clôture de session de caisse
+  - Annulation de vente
+  - Mouvements de stock (loss/waste/breakage)
+- Les ventes annulées ne doivent **jamais** être supprimées — marquer avec `status = "cancelled"`
+
+### Permissions
+- Caissier : peut ouvrir/clôturer sa propre session, ne peut pas annuler de vente
+- Manager : peut clôturer toute session, peut annuler des ventes, peut modifier les pointages
+- Admin : tous les droits
+
+### Bibliothèques recommandées
+- **Django Channels** — pour WebSocket notifications
+- **python-barcode** — pour générer codes-barres EAN13/CODE128
+- **qrcode** — pour générer QR codes
+- **ReportLab** ou **WeasyPrint** — pour générer PDF d'étiquettes
+- **Redis** — pour gérer les connexions WebSocket par organisation
+
+---
+
+## Checklist d'implémentation
+
+### POS Sessions
+- [ ] Modèle `PosSession` avec tous les champs
+- [ ] Endpoint liste des sessions avec filtres
+- [ ] Endpoint session actuelle
+- [ ] Endpoint ouvrir session (validation + génération numéro)
+- [ ] Endpoint clôturer session (calcul KPIs + audit)
+- [ ] Endpoint Z de caisse (agrégations)
+- [ ] Endpoint envoi email rapport
+
+### POS Cancellations
+- [ ] Modèle `PosCancellation`
+- [ ] Endpoint liste des annulations
+- [ ] Endpoint annuler vente (validation permissions + audit)
+- [ ] Restauration stock lors de l'annulation
+
+### HR Attendance
+- [ ] Modèle `AttendanceRecord`
+- [ ] Endpoint liste des pointages avec filtres
+- [ ] Endpoint clock-in (validation + calcul statut)
+- [ ] Endpoint clock-out (calcul heures travaillées)
+- [ ] Endpoint saisie manuelle (permissions)
+- [ ] Endpoint modifier pointage (permissions)
+- [ ] Endpoint supprimer pointage (permissions)
+- [ ] Endpoint résumé de présence (agrégations)
+
+### Labels & Barcodes
+- [ ] Modèle `LabelTemplate`
+- [ ] Modèle `LabelPrintJob`
+- [ ] Endpoints CRUD templates
+- [ ] Endpoint historique impressions
+- [ ] Endpoint imprimer étiquette (génération PDF)
+- [ ] Endpoint imprimer en lot (PDF consolidé)
+- [ ] Endpoint réimprimer
+- [ ] Endpoint générer code-barres (preview SVG/PNG)
+
+### Notifications WebSocket
+- [ ] Configuration Django Channels
+- [ ] Consumer WebSocket avec auth JWT
+- [ ] Groupes par organisation
+- [ ] Broadcast des 9 types de notifications
+- [ ] Gestion reconnexion
+
+### Inventory Movements
+- [ ] Ajouter types `loss`, `waste`, `breakage` au modèle
+- [ ] Validation `reason` obligatoire pour nouveaux types
+- [ ] Filtrage par type (multiple)
+- [ ] Audit des mouvements
+
+---
+
+## Contact
+
+Pour toute question sur ce document ou les spécifications frontend, contacter l'équipe frontend.
+
+**Frontend déjà implémenté :** ✅  
+**Backend à implémenter :** ⏳
+
+
+## 5. Notifications WebSocket
+
+### 5.1 Connexion WebSocket
+
+**URL :** `/ws/notifications/`  
+**Protocole :** WebSocket  
+**Auth :** Oui (token JWT via query param)
+
+**URL de connexion :**
+```
+ws://backend.example.com/ws/notifications/?token=<jwt_token>&org_id=<org_uuid>
+```
+
+**Query params :**
+- `token` — JWT token de l'utilisateur (même que Bearer token)
+- `org_id` — UUID de l'organisation courante
+
+---
+
+### 5.2 Format des messages
+
+**Message envoyé par le serveur :**
+```json
+{
+  "id": "uuid",
+  "type": "pos_sale_completed",
+  "title": "Nouvelle vente",
+  "message": "Vente V-2026-042 : 15 000 FCFA",
+  "payload": {
+    "sale_id": "uuid",
+    "sale_number": "V-2026-042",
+    "total": "15000.00",
+    "warehouse": "Magasin Centre-Ville"
+  },
+  "created_at": "2026-04-27T14:30:00Z",
+  "read": false
+}
+```
+
+---
+
+### 5.3 Types de notifications
+
+| Type | Titre | Déclencheur |
+|------|-------|-------------|
+| `pos_sale_completed` | Nouvelle vente | Vente POS finalisée |
+| `pos_sale_cancelled` | Vente annulée | Annulation d'une vente |
+| `pos_session_closed` | Session clôturée | Clôture de caisse |
+| `stock_low` | Stock faible | Stock < seuil minimum |
+| `stock_out` | Rupture de stock | Stock = 0 |
+| `cash_difference` | Écart de caisse | Différence > 1000 FCFA |
+| `new_ecommerce_order` | Nouvelle commande | Commande e-commerce reçue |
+| `hr_clock_in` | Pointage arrivée | Employé pointe son arrivée |
+| `hr_clock_out` | Pointage sortie | Employé pointe sa sortie |
+
+---
+
+### 5.4 Implémentation backend (Django Channels)
+
+**Configuration requise :**
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    'daphne',  # ASGI server
+    'channels',
+    # ...
+]
+
+ASGI_APPLICATION = 'project.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
+```
+
+**Consumer WebSocket :**
+
+```python
+# consumers.py
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
+
+class NotificationsConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Récupérer token et org_id depuis query params
+        token = self.scope['query_string'].decode().split('token=')[1].split('&')[0]
+        org_id = self.scope['query_string'].decode().split('org_id=')[1]
+        
+        # Valider le token JWT
+        user = await self.get_user_from_token(token)
+        if not user:
+            await self.close()
+            return
+        
+        # Rejoindre le groupe de l'organisation
+        self.org_group_name = f'notifications_{org_id}'
+        await self.channel_layer.group_add(
+            self.org_group_name,
+            self.channel_name
+        )
+        
+        await self.accept()
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.org_group_name,
+            self.channel_name
+        )
+    
+    async def notification_message(self, event):
+        # Envoyer la notification au client
+        await self.send(text_data=json.dumps(event['notification']))
+    
+    @database_sync_to_async
+    def get_user_from_token(self, token):
+        # Valider le JWT et retourner l'utilisateur
+        # Utiliser la même logique que l'auth REST
+        pass
+```
+
+**Broadcast d'une notification :**
+
+```python
+# utils/notifications.py
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+def broadcast_notification(org_id, notification_type, title, message, payload):
+    channel_layer = get_channel_layer()
+    notification = {
+        'id': str(uuid.uuid4()),
+        'type': notification_type,
+        'title': title,
+        'message': message,
+        'payload': payload,
+        'created_at': timezone.now().isoformat(),
+        'read': False
+    }
+    
+    async_to_sync(channel_layer.group_send)(
+        f'notifications_{org_id}',
+        {
+            'type': 'notification_message',
+            'notification': notification
+        }
+    )
+```
+
+**Exemple d'utilisation :**
+
+```python
+# Dans la vue de création de vente POS
+from utils.notifications import broadcast_notification
+
+def create_sale(request):
+    # ... créer la vente ...
+    
+    # Broadcast notification
+    broadcast_notification(
+        org_id=request.org.id,
+        notification_type='pos_sale_completed',
+        title='Nouvelle vente',
+        message=f'Vente {sale.number} : {sale.total} FCFA',
+        payload={
+            'sale_id': str(sale.id),
+            'sale_number': sale.number,
+            'total': str(sale.total),
+            'warehouse': sale.warehouse.name
+        }
+    )
+    
+    return Response(...)
+```
+
+---
+
+### 5.5 Reconnexion automatique
+
+Le frontend gère la reconnexion automatique après 5 secondes en cas de déconnexion. Le backend doit :
+- Accepter les reconnexions multiples du même utilisateur
+- Nettoyer les connexions fantômes (timeout après 60s d'inactivité)
+- Supporter plusieurs connexions simultanées (multi-onglets)
+
+---
+
+## 6. Inventory Movements
+
+### 6.1 Nouveaux types de mouvement
+
+Ajouter 3 nouveaux types au modèle `InventoryMovement` existant :
+
+| Type | Label | Description |
+|------|-------|-------------|
+| `loss` | Perte | Produit perdu (vol, erreur) |
+| `waste` | Déchet | Produit périmé ou abîmé |
+| `breakage` | Casse | Produit cassé |
+
+**Modèle Django (ajout) :**
+
+```python
+# models.py
+class InventoryMovement(models.Model):
+    MOVEMENT_TYPES = [
+        ('in', 'Entrée'),
+        ('out', 'Sortie'),
+        ('transfer', 'Transfert'),
+        ('adjustment', 'Ajustement'),
+        ('loss', 'Perte'),        # NOUVEAU
+        ('waste', 'Déchet'),      # NOUVEAU
+        ('breakage', 'Casse'),    # NOUVEAU
+    ]
+    
+    type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
+    reason = models.TextField(blank=True, null=True)  # Obligatoire pour loss/waste/breakage
+    # ... autres champs existants ...
+```
+
+---
+
+### 6.2 Validation
+
+**Règles de validation :**
+- Pour les types `loss`, `waste`, `breakage` : le champ `reason` est **obligatoire** (min 10 caractères)
+- La quantité doit être négative (déduction du stock)
+- Créer une entrée d'audit pour traçabilité
+
+**Exemple de validation Django :**
+
+```python
+# serializers.py
+class InventoryMovementSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        if data['type'] in ['loss', 'waste', 'breakage']:
+            if not data.get('reason') or len(data['reason']) < 10:
+                raise serializers.ValidationError({
+                    'reason': 'Le motif est obligatoire (min 10 caractères) pour ce type de mouvement.'
+                })
+            if data['quantity'] >= 0:
+                raise serializers.ValidationError({
+                    'quantity': 'La quantité doit être négative pour une perte/déchet/casse.'
+                })
+        return data
+```
+
+---
+
+### 6.3 Endpoint existant (modification)
+
+**Méthode :** `POST`  
+**URL :** `/api/inventory/movements/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Body (exemple perte) :**
+```json
+{
+  "type": "loss",
+  "product": "uuid",
+  "warehouse": "uuid",
+  "quantity": -5,
+  "reason": "Vol constaté lors de l'inventaire mensuel"
+}
+```
+
+**Body (exemple déchet) :**
+```json
+{
+  "type": "waste",
+  "product": "uuid",
+  "warehouse": "uuid",
+  "quantity": -12,
+  "reason": "Produits périmés - date limite dépassée"
+}
+```
+
+**Body (exemple casse) :**
+```json
+{
+  "type": "breakage",
+  "product": "uuid",
+  "warehouse": "uuid",
+  "quantity": -3,
+  "reason": "Bouteilles cassées lors de la manutention"
+}
+```
+
+**Réponse :** L'objet `InventoryMovement` créé
+
+---
+
+### 6.4 Filtrage par type
+
+**Méthode :** `GET`  
+**URL :** `/api/inventory/movements/`  
+**Auth :** Oui  
+**Org filter :** Oui
+
+**Query params :**
+- `type` — filtrer par type (peut être multiple : `?type=loss&type=waste&type=breakage`)
+- `date_from` — filtrer par date
+- `date_to` — filtrer par date
+- `product` — filtrer par produit
+- `warehouse` — filtrer par entrepôt
+
+**Exemple :**
+```
+GET /api/inventory/movements/?type=loss&type=waste&type=breakage&date_from=2026-04-01
+```
+
+---
+
+### 6.5 Audit et traçabilité
+
+Pour chaque mouvement de type `loss`, `waste`, `breakage` :
+- Créer une entrée d'audit immuable avec :
+  - Utilisateur qui a créé le mouvement
+  - Timestamp
+  - Produit, quantité, motif
+  - Valeur du stock avant/après
+- Envoyer une notification WebSocket si la valeur > seuil (ex: 10 000 FCFA)
+
+---
+
+## Résumé des endpoints
+
+| Méthode | Endpoint | Priorité | Description |
+|---------|----------|----------|-------------|
+| **POS Sessions** |
+| GET | `/api/pos/sessions/` | 🔴 Critique | Liste des sessions de caisse |
+| GET | `/api/pos/sessions/current/` | 🔴 Critique | Session actuelle du caissier |
+| POST | `/api/pos/sessions/open/` | 🔴 Critique | Ouvrir une session |
+| POST | `/api/pos/sessions/{id}/close/` | 🔴 Critique | Clôturer une session |
+| GET | `/api/pos/sessions/{id}/z-report/` | 🔴 Critique | Z de caisse (rapport détaillé) |
+| POST | `/api/pos/sessions/{id}/send-report-email/` | 🟡 Important | Envoyer rapport par email |
+| **POS Cancellations** |
+| GET | `/api/pos/cancellations/` | 🔴 Critique | Liste des annulations |
+| POST | `/api/pos/sales/{id}/cancel/` | 🔴 Critique | Annuler une vente |
+| **HR Attendance** |
+| GET | `/api/hr/attendance/` | 🔴 Critique | Liste des pointages |
+| POST | `/api/hr/attendance/clock-in/` | 🔴 Critique | Pointage arrivée |
+| POST | `/api/hr/attendance/{id}/clock-out/` | 🔴 Critique | Pointage sortie |
+| POST | `/api/hr/attendance/` | 🟡 Important | Saisie manuelle (correction) |
+| PATCH | `/api/hr/attendance/{id}/` | 🟡 Important | Modifier un pointage |
+| DELETE | `/api/hr/attendance/{id}/` | 🟡 Important | Supprimer un pointage |
+| GET | `/api/hr/attendance/summary/` | 🟡 Important | Résumé de présence (période) |
+| **Labels & Barcodes** |
+| GET | `/api/labels/templates/` | �� Critique | Liste des templates |
+| POST | `/api/labels/templates/` | 🟡 Important | Créer un template |
+| PATCH | `/api/labels/templates/{id}/` | 🟡 Important | Modifier un template |
+| DELETE | `/api/labels/templates/{id}/` | 🟡 Important | Supprimer un template |
+| GET | `/api/labels/print-jobs/` | 🔴 Critique | Historique des impressions |
+| POST | `/api/labels/print-jobs/` | 🔴 Critique | Imprimer une étiquette |
+| POST | `/api/labels/print-jobs/batch/` | 🔴 Critique | Imprimer en lot |
+| POST | `/api/labels/print-jobs/{id}/reprint/` | 🟡 Important | Réimprimer |
+| POST | `/api/labels/generate/` | 🟡 Important | Générer code-barres (preview) |
+| **Notifications WebSocket** |
+| WS | `/ws/notifications/` | 🔴 Critique | Connexion WebSocket temps réel |
+| **Inventory Movements** |
+| POST | `/api/inventory/movements/` | 🔴 Critique | Créer mouvement (avec nouveaux types) |
+| GET | `/api/inventory/movements/` | 🔴 Critique | Liste mouvements (filtrage par type) |
+
+---
+
+## Checklist d'implémentation
+
+### POS Sessions
+- [ ] Modèle `PosSession` avec tous les champs
+- [ ] Endpoint liste sessions (avec filtres)
+- [ ] Endpoint session actuelle
+- [ ] Endpoint ouvrir session (validation + auto-increment)
+- [ ] Endpoint clôturer session (calcul KPIs)
+- [ ] Endpoint Z de caisse (agrégations)
+- [ ] Endpoint envoi email (génération HTML)
+- [ ] Audit immuable des sessions
+
+### POS Cancellations
+- [ ] Modèle `PosCancellation`
+- [ ] Endpoint liste annulations
+- [ ] Endpoint annuler vente (validation permissions)
+- [ ] Restauration stock automatique
+- [ ] Audit immuable des annulations
+- [ ] Ne jamais supprimer les ventes annulées
+
+### HR Attendance
+- [ ] Modèle `AttendanceRecord` avec tous les champs
+- [ ] Endpoint liste pointages (avec filtres)
+- [ ] Endpoint clock-in (validation + calcul statut)
+- [ ] Endpoint clock-out (calcul heures travaillées)
+- [ ] Endpoint saisie manuelle (permissions RH)
+- [ ] Endpoint modifier pointage (permissions RH)
+- [ ] Endpoint supprimer pointage (permissions RH)
+- [ ] Endpoint résumé période (agrégations)
+
+### Labels & Barcodes
+- [ ] Modèle `LabelTemplate`
+- [ ] Modèle `LabelPrintJob`
+- [ ] Endpoint liste templates
+- [ ] Endpoint CRUD templates
+- [ ] Endpoint historique impressions
+- [ ] Endpoint imprimer étiquette (génération PDF)
+- [ ] Endpoint imprimer en lot (PDF consolidé)
+- [ ] Endpoint réimprimer
+- [ ] Endpoint générer code-barres (preview SVG/PNG)
+
+### Notifications WebSocket
+- [ ] Configuration Django Channels
+- [ ] Consumer WebSocket avec auth JWT
+- [ ] Groupes par organisation
+- [ ] Broadcast des 9 types de notifications
+- [ ] Gestion reconnexion
+
+### Inventory Movements
+- [ ] Ajouter types `loss`, `waste`, `breakage` au modèle
+- [ ] Validation `reason` obligatoire pour nouveaux types
+- [ ] Filtrage par type (multiple)
+- [ ] Audit des mouvements
+
+---
+
+## Notes générales
+
+- **Authentification :** Tous les endpoints utilisent JWT via header `Authorization: Bearer <token>`
+- **Organisation :** Tous les endpoints filtrent par organisation via header `X-Current-Org-Id`
+- **Pagination :** Retourner soit `[...]` soit `{ "results": [...] }` — les deux sont gérés
+- **Dates :** Format ISO 8601 : `"2026-04-27T14:30:00Z"`
+- **Prix/Montants :** Strings numériques : `"15000.00"` (pas d'entiers)
+- **Audit :** Créer des entrées d'audit immuables pour toutes les opérations sensibles (sessions, annulations, mouvements)
+- **Permissions :** Respecter les rôles (caissier, manager, admin, RH)
+
+---
+
+## Bibliothèques Python recommandées
+
+- **Django Channels** — WebSocket support
+- **channels-redis** — Redis backend pour Channels
+- **python-barcode** — Génération code-barres EAN13/CODE128
+- **qrcode** — Génération QR codes
+- **reportlab** ou **weasyprint** — Génération PDF étiquettes
+- **Pillow** — Manipulation images (PNG base64)
+
+---
+
+## Contact
+
+Pour toute question sur ce document ou les spécifications frontend, contacter l'équipe frontend.
+
+**Frontend déjà implémenté :** ✅  
+**Backend à implémenter :** ⏳

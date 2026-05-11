@@ -20,7 +20,6 @@ const SHOP_BASE = [
     cover_url: COVER_PLACEHOLDER,
     short_description: "Mode urbaine, accessoires & sneakers à Cotonou.",
     products_count: 14,
-    category: "mode",
     city: "Cotonou",
     description:
       "Bienvenue chez Didier Shop. Nous proposons une sélection pointue de pièces streetwear, sneakers et accessoires, livrés rapidement à Cotonou et alentours.",
@@ -39,7 +38,6 @@ const SHOP_BASE = [
       "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
     short_description: "Bijoux artisanaux faits main, matières précieuses.",
     products_count: 22,
-    category: "bijoux",
     city: "Porto-Novo",
     description:
       "Amina Bijoux propose des créations artisanales uniques en argent, laiton et perles naturelles. Chaque pièce est faite main avec amour.",
@@ -58,7 +56,6 @@ const SHOP_BASE = [
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     short_description: "Smartphones, accessoires et gadgets reconditionnés.",
     products_count: 34,
-    category: "tech",
     city: "Cotonou",
     description:
       "Eko Tech, votre boutique tech de confiance. Smartphones reconditionnés, accessoires et services de réparation.",
@@ -77,7 +74,6 @@ const SHOP_BASE = [
       "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80",
     short_description: "Décoration intérieure, mobilier artisanal du Bénin.",
     products_count: 9,
-    category: "maison",
     city: "Cotonou",
     description: "Pièces de décoration et mobilier conçus par des artisans locaux.",
     contact_phone: null,
@@ -95,7 +91,6 @@ const SHOP_BASE = [
       "https://images.unsplash.com/photo-1522335789203-aaa14a4f7c70?auto=format&fit=crop&w=1600&q=80",
     short_description: "Cosmétiques naturels, beurres et huiles d'Afrique.",
     products_count: 17,
-    category: "beaute",
     city: "Abomey-Calavi",
     description:
       "Zaza Beauty propose des soins naturels, beurres de karité, huiles essentielles, et accessoires beauté.",
@@ -114,7 +109,6 @@ const SHOP_BASE = [
       "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1600&q=80",
     short_description: "Produits frais locaux livrés en 24h.",
     products_count: 41,
-    category: "alimentaire",
     city: "Cotonou",
     description: "Le marché du quartier livré chez vous. Frais, local, simple.",
     contact_phone: "+229 64 00 00 00",
@@ -372,19 +366,17 @@ const PRODUCTS_BY_SHOP: Record<string, ProductDetailDTO[]> = {
 
 export function listShopsMock(params: {
   query?: string;
-  category?: string;
   page?: number;
 }): PaginatedShopsDTO {
-  const { query = "", category = "", page = 1 } = params;
+  const { query = "", page = 1 } = params;
   const q = query.trim().toLowerCase();
 
   const filtered = SHOP_BASE.filter((shop) => {
-    const matchQuery =
+    return (
       !q ||
       shop.name.toLowerCase().includes(q) ||
-      (shop.short_description ?? "").toLowerCase().includes(q);
-    const matchCategory = !category || shop.category === category;
-    return matchQuery && matchCategory;
+      (shop.short_description ?? "").toLowerCase().includes(q)
+    );
   });
 
   const PAGE_SIZE = 12;
@@ -404,7 +396,6 @@ export function listShopsMock(params: {
       cover_url: s.cover_url,
       short_description: s.short_description,
       products_count: s.products_count,
-      category: s.category,
       city: s.city,
     })),
   };
@@ -470,7 +461,6 @@ export function getFeaturedShopsMock(): ShopDetailDTO[] {
     cover_url: s.cover_url,
     short_description: s.short_description,
     products_count: s.products_count,
-    category: s.category,
     city: s.city,
     description: s.description,
     contact_phone: s.contact_phone,
@@ -496,6 +486,7 @@ export function getTrendingProductsMock(): Array<{
   return items.slice(0, 8);
 }
 
+/** Tuiles d'accueil uniquement : ne correspondent pas aux slugs API. Les liens ouvrent `/shops?query=…`. Remplacer par `GET /api/marketplace/categories/` quand branché. */
 export const MOCK_CATEGORIES = [
   { slug: "mode", label: "Mode" },
   { slug: "bijoux", label: "Bijoux" },

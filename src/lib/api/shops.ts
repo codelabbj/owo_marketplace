@@ -15,7 +15,6 @@ import {
 
 export type ListShopsParams = {
   query?: string;
-  category?: string;
   page?: number;
   signal?: AbortSignal;
 };
@@ -50,7 +49,6 @@ export async function listShops(
       const json = await apiFetch("/api/marketplace/shops", {
         searchParams: {
           query: params.query,
-          category: params.category,
           page: params.page,
         },
         signal: params.signal,

@@ -8,7 +8,6 @@ export const ShopSummarySchema = z.object({
   cover_url: z.string().url().nullable().optional(),
   short_description: z.string().nullable().optional(),
   products_count: z.number().int().nonnegative().default(0),
-  category: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
 });
 

@@ -23,7 +23,6 @@ export function toShopSummary(dto: ShopSummaryDTO): ShopSummary {
     coverUrl: dto.cover_url ?? null,
     shortDescription: dto.short_description ?? null,
     productsCount: dto.products_count ?? 0,
-    category: dto.category ?? null,
     city: dto.city ?? null,
   };
 }
@@ -51,7 +50,6 @@ export function toShopFromBundle(
     coverUrl: s.cover_url ?? null,
     shortDescription: s.short_description ?? null,
     productsCount: s.products_count ?? 0,
-    category: null,
     city: null,
     description: s.description ?? null,
     contactPhone: s.contact_phone ?? null,

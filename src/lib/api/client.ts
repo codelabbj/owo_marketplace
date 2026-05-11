@@ -16,6 +16,8 @@ export type FetchOptions = {
   signal?: AbortSignal;
   revalidate?: number | false;
   tags?: string[];
+  method?: "GET" | "POST";
+  jsonBody?: unknown;
 };
 
 function buildUrl(path: string, searchParams?: FetchOptions["searchParams"]): string {
@@ -36,12 +38,19 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   const url = buildUrl(path, options.searchParams);
 
+  const method = options.method ?? "GET";
   const init: RequestInit & { next?: { revalidate?: number; tags?: string[] } } = {
-    method: "GET",
+    method,
     headers: {
       Accept: "application/json",
+      ...(method !== "GET" && options.jsonBody !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
     },
     signal: options.signal,
+    ...(method !== "GET" && options.jsonBody !== undefined
+      ? { body: JSON.stringify(options.jsonBody) }
+      : {}),
   };
 
   if (options.revalidate !== undefined || options.tags) {

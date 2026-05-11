@@ -8,7 +8,6 @@ export type ShopSummary = {
   coverUrl: string | null;
   shortDescription: string | null;
   productsCount: number;
-  category?: string | null;
   city?: string | null;
 };
 
