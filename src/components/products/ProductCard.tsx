@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ProductSummary } from "@/types/domain";
 import { formatPrice } from "@/lib/utils/currency";
+import { shouldUseUnoptimizedImage } from "@/lib/utils/images";
 import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
 import { env } from "@/lib/config/env";
 
@@ -39,6 +40,7 @@ export function ProductCard({
             alt={product.name}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
+            unoptimized={shouldUseUnoptimizedImage(product.imageUrl)}
             className="object-cover transition-transform duration-160 ease-out group-hover:scale-[1.03]"
           />
         ) : (
@@ -77,6 +79,12 @@ export function ProductCard({
             <span className="text-body font-semibold text-ink">{formattedPrice}</span>
           )}
         </div>
+        <Link
+          href={`/${shopSlug}/products/${product.slug}`}
+          className="btn-outline mt-1 w-full py-2 text-caption"
+        >
+          Voir le produit
+        </Link>
         <WhatsAppButton
           fullWidth
           size="sm"

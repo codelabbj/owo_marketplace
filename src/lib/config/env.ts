@@ -4,11 +4,14 @@ const EnvSchema = z.object({
   NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: z
     .string()
     .url()
-    .default("https://api.owo.bj"),
+    .default("https://api.erp.codelab.bj"),
   NEXT_PUBLIC_SITE_URL: z.string().url().default("https://owo.bj"),
   NEXT_PUBLIC_USE_MOCKS: z
     .union([z.string(), z.undefined()])
-    .transform((v) => v === undefined || v === "true"),
+    .transform((v) => {
+      if (v === undefined) return false;
+      return v.trim().toLowerCase() === "true";
+    }),
 });
 
 const parsed = EnvSchema.safeParse({
@@ -26,9 +29,9 @@ if (!parsed.success) {
 const safe = parsed.success
   ? parsed.data
   : {
-      NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: "https://api.owo.bj",
+      NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: "https://api.erp.codelab.bj",
       NEXT_PUBLIC_SITE_URL: "https://owo.bj",
-      NEXT_PUBLIC_USE_MOCKS: true,
+      NEXT_PUBLIC_USE_MOCKS: false,
     };
 
 export const env = {

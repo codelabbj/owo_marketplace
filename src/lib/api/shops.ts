@@ -1,10 +1,12 @@
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { env } from "@/lib/config/env";
+import { marketplacePaths } from "@/lib/api/marketplacePaths";
 import {
   PaginatedShopsSchema,
   type PaginatedShopsDTO,
 } from "@/schemas/shop.schema";
 import {
+  PublicShopDetailApiSchema,
   ShopWithProductsSchema,
   type ShopWithProductsDTO,
 } from "@/schemas/product.schema";
@@ -32,7 +34,6 @@ async function withMockFallback<T>(
   try {
     return await realCall();
   } catch (err) {
-    // graceful degradation if backend not ready
     if (err instanceof ApiError && err.status >= 500) {
       const m = mockCall();
       if (m !== null) return m;
@@ -46,7 +47,7 @@ export async function listShops(
 ): Promise<PaginatedShopsDTO> {
   return withMockFallback<PaginatedShopsDTO>(
     async () => {
-      const json = await apiFetch("/api/marketplace/shops", {
+      const json = await apiFetch(marketplacePaths.shops, {
         searchParams: {
           query: params.query,
           page: params.page,
@@ -55,7 +56,15 @@ export async function listShops(
         revalidate: 60,
         tags: ["shops"],
       });
-      return PaginatedShopsSchema.parse(json);
+      try {
+        return PaginatedShopsSchema.parse(json);
+      } catch (parseErr) {
+        if (process.env.NODE_ENV === "development") {
+          // eslint-disable-next-line no-console
+          console.error("[listShops] Réponse API invalide", parseErr, json);
+        }
+        throw parseErr;
+      }
     },
     () => listShopsMock(params),
   );
@@ -64,16 +73,16 @@ export async function listShops(
 export async function getShop(slug: string): Promise<ShopWithProductsDTO> {
   return withMockFallback<ShopWithProductsDTO>(
     async () => {
-      const json = await apiFetch(
-        `/api/marketplace/shops/${encodeURIComponent(slug)}`,
-        {
-          revalidate: 60,
-          tags: ["shop", `shop:${slug}`],
-        },
-      );
-      return ShopWithProductsSchema.parse(json);
+      const json = await apiFetch(marketplacePaths.shop(slug), {
+        revalidate: 60,
+        tags: ["shop", `shop:${slug}`],
+      });
+      return PublicShopDetailApiSchema.parse(json);
     },
-    () => getShopDetailMock(slug),
+    () => {
+      const mock = getShopDetailMock(slug);
+      return mock ? ShopWithProductsSchema.parse(mock) : null;
+    },
     `Shop ${slug} not found`,
   );
 }

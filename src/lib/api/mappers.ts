@@ -13,14 +13,22 @@ import type {
   ProductSummary,
   ProductDetail,
 } from "@/types/domain";
+import { env } from "@/lib/config/env";
+
+function resolveMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const base = env.apiBaseUrl.replace(/\/+$/, "");
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 export function toShopSummary(dto: ShopSummaryDTO): ShopSummary {
   return {
     id: dto.id,
     slug: dto.slug,
     name: dto.name,
-    logoUrl: dto.logo_url ?? null,
-    coverUrl: dto.cover_url ?? null,
+    logoUrl: resolveMediaUrl(dto.logo_url),
+    coverUrl: resolveMediaUrl(dto.cover_url),
     shortDescription: dto.short_description ?? null,
     productsCount: dto.products_count ?? 0,
     city: dto.city ?? null,
@@ -46,11 +54,11 @@ export function toShopFromBundle(
     id: s.id,
     slug: s.slug,
     name: s.name,
-    logoUrl: s.logo_url ?? null,
-    coverUrl: s.cover_url ?? null,
+    logoUrl: resolveMediaUrl(s.logo_url),
+    coverUrl: resolveMediaUrl(s.cover_url),
     shortDescription: s.short_description ?? null,
     productsCount: s.products_count ?? 0,
-    city: null,
+    city: s.city ?? null,
     description: s.description ?? null,
     contactPhone: s.contact_phone ?? null,
     address: s.address ?? null,
@@ -64,7 +72,7 @@ export function toProductSummary(dto: ProductSummaryDTO): ProductSummary {
     id: dto.id,
     slug: dto.slug,
     name: dto.name,
-    imageUrl: dto.image_url ?? null,
+    imageUrl: resolveMediaUrl(dto.image_url),
     price: dto.price,
     promoPrice: dto.promo_price ?? null,
     currency: dto.currency,
@@ -79,7 +87,7 @@ export function toProductDetail(dto: ProductDetailDTO): ProductDetail {
     slug: dto.slug,
     name: dto.name,
     description: dto.description,
-    images: dto.images,
+    images: dto.images.map((u) => resolveMediaUrl(u) ?? u).filter(Boolean) as string[],
     price: dto.price,
     promoPrice: dto.promo_price ?? null,
     currency: dto.currency,

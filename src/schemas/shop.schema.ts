@@ -1,11 +1,17 @@
 import { z } from "zod";
 
+/** URL absolue, chemin relatif ou null (évite un échec Zod sur toute la réponse). */
+const optionalUrl = z.preprocess(
+  (v) => (v === "" || v === undefined || v === null ? null : v),
+  z.string().nullable().optional(),
+);
+
 export const ShopSummarySchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
-  logo_url: z.string().url().nullable().optional(),
-  cover_url: z.string().url().nullable().optional(),
+  logo_url: optionalUrl,
+  cover_url: optionalUrl,
   short_description: z.string().nullable().optional(),
   products_count: z.number().int().nonnegative().default(0),
   city: z.string().nullable().optional(),
@@ -16,7 +22,7 @@ export const ShopDetailSchema = ShopSummarySchema.extend({
   contact_phone: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   whatsapp_phone_e164: z.string().nullable().optional(),
-  whatsapp_url: z.string().url().nullable().optional(),
+  whatsapp_url: optionalUrl,
 });
 
 export const PaginatedShopsSchema = z.object({

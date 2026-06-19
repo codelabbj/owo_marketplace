@@ -1,5 +1,6 @@
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { env } from "@/lib/config/env";
+import { marketplacePaths } from "@/lib/api/marketplacePaths";
 import {
   ProductDetailSchema,
   type ProductDetailDTO,
@@ -17,7 +18,7 @@ export async function getProduct(
   }
   try {
     const json = await apiFetch(
-      `/api/marketplace/shops/${encodeURIComponent(shopSlug)}/products/${encodeURIComponent(productSlug)}`,
+      marketplacePaths.product(shopSlug, productSlug),
       {
         revalidate: 60,
         tags: ["product", `product:${shopSlug}:${productSlug}`],

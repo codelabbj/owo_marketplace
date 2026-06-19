@@ -5,6 +5,7 @@ import { getShop } from "@/lib/api/shops";
 import { ApiError } from "@/lib/api/client";
 import { toProductDetail, toProductSummary } from "@/lib/api/mappers";
 import { ProductGallery } from "@/components/products/ProductGallery";
+import { ProductBreadcrumbs } from "@/components/products/ProductBreadcrumbs";
 import { ProductCard } from "@/components/products/ProductCard";
 import { ProductPurchasePanel } from "./ProductPurchasePanel";
 import { env } from "@/lib/config/env";
@@ -35,7 +36,9 @@ export async function generateMetadata({
         title: product.name,
         description: product.description.slice(0, 160) || undefined,
         url: `${env.siteUrl}/${shopSlug}/products/${productSlug}`,
-        images: product.images.length ? [{ url: product.images[0]! }] : undefined,
+        images: product.images.length
+          ? product.images.map((url) => ({ url }))
+          : undefined,
       },
     };
   } catch {
@@ -86,14 +89,49 @@ export default async function ProductPage({ params }: { params: Params }) {
 
   return (
     <div className="container py-8">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[60%_1fr] lg:gap-8">
+      <ProductBreadcrumbs
+        shopName={product.shop.name}
+        shopSlug={shopSlug}
+        productName={product.name}
+      />
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <ProductGallery images={product.images} alt={product.name} />
         <div className="lg:pt-2">
           <ProductPurchasePanel product={product} />
         </div>
       </div>
 
-      <p className="mt-6 text-body-sm text-ink-muted">
+      {product.description.trim() ? (
+        <section className="mt-12 rounded-lg border border-border bg-surface-subtle p-6">
+          <h2 className="text-h2">Description</h2>
+          <div className="mt-4 whitespace-pre-line text-body leading-relaxed text-ink-muted">
+            {product.description}
+          </div>
+        </section>
+      ) : null}
+
+      {product.variants.length > 0 ? (
+        <section className="mt-8">
+          <h2 className="text-h2">Variantes disponibles</h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {product.variants.map((v) => (
+              <li
+                key={v.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
+              >
+                <span className="font-medium text-ink">{v.label}</span>
+                <span className="text-body-sm text-ink-muted">
+                  {formatPrice(v.price, product.currency)}
+                  {v.stock > 0 ? ` · ${v.stock} en stock` : " · Rupture"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <p className="mt-8 text-body-sm text-ink-muted">
         Prix indicatif :{" "}
         <strong>{formatPrice(product.price, product.currency)}</strong>. Le
         prix final sera confirmé par le vendeur sur WhatsApp.

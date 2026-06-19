@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
 import { env } from "@/lib/config/env";
+import { marketplacePaths } from "@/lib/api/marketplacePaths";
 import {
   ContactIntentRequestSchema,
   type ContactIntentRequestDTO,
@@ -14,7 +15,7 @@ export async function submitContactIntent(
     return;
   }
   const validated = ContactIntentRequestSchema.parse(body);
-  await apiFetch<unknown>("/api/marketplace/contact-intents", {
+  await apiFetch<unknown>(marketplacePaths.contactIntents, {
     method: "POST",
     jsonBody: validated,
     signal: options.signal,

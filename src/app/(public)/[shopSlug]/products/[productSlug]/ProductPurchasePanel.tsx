@@ -74,14 +74,12 @@ export function ProductPurchasePanel({
         </div>
         {stockLabel ? (
           <p className="mt-1 text-body-sm text-ink-muted">{stockLabel}</p>
-        ) : (
+        ) : inStockGlobally ? (
           <p className="mt-1 text-body-sm text-emerald-700 dark:text-emerald-400">En stock</p>
+        ) : (
+          <p className="mt-1 text-body-sm text-red-600 dark:text-red-400">Rupture de stock</p>
         )}
       </div>
-
-      {product.description ? (
-        <p className="text-body text-ink-muted">{product.description}</p>
-      ) : null}
 
       {hasVariants ? (
         <VariantSelector
