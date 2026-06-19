@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Topbar } from "./Topbar";
 import { Footer } from "./Footer";
+import { CartShell } from "@/components/cart/CartShell";
 
 export function MarketplaceLayout({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export function MarketplaceLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
+      <CartShell />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { CartTrigger } from "@/components/cart/CartTrigger";
 
 export function Topbar() {
   return (
@@ -46,6 +47,7 @@ export function Topbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <CartTrigger />
           <ThemeToggle />
           <Link href="/shops" className="btn-primary">
             Explorer les boutiques

@@ -3,7 +3,7 @@ import Image from "next/image";
 import type { ProductSummary } from "@/types/domain";
 import { formatPrice } from "@/lib/utils/currency";
 import { shouldUseUnoptimizedImage } from "@/lib/utils/images";
-import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
+import { ProductActions } from "@/components/products/ProductActions";
 import { env } from "@/lib/config/env";
 
 export type ProductCardProps = {
@@ -26,6 +26,7 @@ export function ProductCard({
   const formattedPromo = product.promoPrice
     ? formatPrice(product.promoPrice, product.currency)
     : null;
+  const outOfStock = !product.inStock;
 
   return (
     <article className="card flex h-full flex-col overflow-hidden">
@@ -50,7 +51,7 @@ export function ProductCard({
         )}
         <div className="absolute left-2 top-2 flex flex-col gap-1">
           {formattedPromo ? <span className="badge-promo">Promo</span> : null}
-          {!product.inStock ? (
+          {outOfStock ? (
             <span className="badge-rupture">Rupture</span>
           ) : product.stockLabel ? (
             <span className="badge-stock">{product.stockLabel}</span>
@@ -79,19 +80,29 @@ export function ProductCard({
             <span className="text-body font-semibold text-ink">{formattedPrice}</span>
           )}
         </div>
-        <Link
-          href={`/${shopSlug}/products/${product.slug}`}
-          className="btn-outline mt-1 w-full py-2 text-caption"
-        >
-          Voir le produit
-        </Link>
-        <WhatsAppButton
-          fullWidth
-          size="sm"
+        <ProductActions
+          className="mt-auto pt-1"
           shopSlug={shopSlug}
           productSlug={product.slug}
           phoneE164={whatsappPhoneE164}
           whatsappUrl={whatsappUrl}
+          disabled={outOfStock}
+          disabledReason={
+            outOfStock ? "Produit en rupture" : "Contact WhatsApp indisponible"
+          }
+          cartItem={{
+            shopSlug,
+            shopName,
+            productSlug: product.slug,
+            productName: product.name,
+            productUrl,
+            qty: 1,
+            formattedPrice,
+            promoPrice: formattedPromo,
+            currency: product.currency,
+            whatsappPhoneE164: whatsappPhoneE164 ?? null,
+            whatsappUrl: whatsappUrl ?? null,
+          }}
           message={{
             shopName,
             productName: product.name,
@@ -101,13 +112,6 @@ export function ProductCard({
             promoPrice: formattedPromo ?? undefined,
             stockLabel: product.stockLabel ?? undefined,
           }}
-          disabled={!product.inStock}
-          disabledReason={
-            !product.inStock
-              ? "Produit en rupture"
-              : "Contact WhatsApp indisponible"
-          }
-          className="mt-1"
         />
       </div>
     </article>

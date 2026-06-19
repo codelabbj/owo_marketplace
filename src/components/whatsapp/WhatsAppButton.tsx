@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils/cn";
 import { getBuyerProfile, setBuyerProfile } from "@/lib/storage/buyerProfile";
 import { submitContactIntent } from "@/lib/api/contactIntent";
 import type { BuyerProfileStored } from "@/schemas/buyer-profile.schema";
+import { useCart } from "@/contexts/CartContext";
 
 export type WhatsAppButtonProps = {
   shopSlug: string;
@@ -21,12 +22,14 @@ export type WhatsAppButtonProps = {
   phoneE164?: string | null;
   whatsappUrl?: string | null;
   message: WhatsAppMessagePayload;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "icon";
   fullWidth?: boolean;
   className?: string;
   label?: string;
   disabled?: boolean;
   disabledReason?: string;
+  /** Si false, le panier n’inhibe pas ce bouton (ex. checkout panier). */
+  respectCartLock?: boolean;
 };
 
 export function WhatsAppButton({
@@ -41,7 +44,11 @@ export function WhatsAppButton({
   label = "Commander sur WhatsApp",
   disabled = false,
   disabledReason,
+  respectCartLock = true,
 }: WhatsAppButtonProps) {
+  const { totalItems } = useCart();
+  const cartBlocksProduct = respectCartLock && totalItems > 0;
+
   const [loading, setLoading] = useState(false);
   const [fallbackOpen, setFallbackOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,7 +56,11 @@ export function WhatsAppButton({
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const isContactAvailable = Boolean(phoneE164 || whatsappUrl);
-  const effectivelyDisabled = disabled || !isContactAvailable;
+  const effectivelyDisabled = disabled || cartBlocksProduct || !isContactAvailable;
+
+  const resolvedDisabledReason = cartBlocksProduct
+    ? "Commandez depuis votre panier"
+    : disabledReason;
 
   const text = buildWhatsAppMessage(message);
   const url = buildWhatsAppUrl({ phoneE164, whatsappUrl, message: text });
@@ -125,11 +136,15 @@ export function WhatsAppButton({
   }, [url, openWhatsApp]);
 
   const sizeClass =
-    size === "lg"
-      ? "h-[52px] md:h-12 px-6 text-button"
-      : size === "sm"
-        ? "h-9 px-3 text-body-sm"
-        : "h-10 px-4 text-button";
+    size === "icon"
+      ? "h-10 w-10 shrink-0 px-0"
+      : size === "lg"
+        ? "h-[52px] md:h-12 px-6 text-button"
+        : size === "sm"
+          ? "h-9 px-3 text-body-sm"
+          : "h-10 px-4 text-button";
+
+  const iconOnly = size === "icon";
 
   if (effectivelyDisabled) {
     return (
@@ -138,23 +153,24 @@ export function WhatsAppButton({
           type="button"
           aria-disabled="true"
           disabled
+          title={resolvedDisabledReason ?? label}
           className={cn(
             "btn-whatsapp",
             sizeClass,
-            fullWidth && "w-full",
-            "opacity-50",
+            fullWidth && !iconOnly && "w-full",
+            cartBlocksProduct ? "pointer-events-none opacity-40" : "opacity-50",
             className,
           )}
         >
-          <WhatsAppIcon className="h-4 w-4" /> {label}
+          <WhatsAppIcon className="h-4 w-4" />
+          {!iconOnly ? label : null}
+          {iconOnly ? <span className="sr-only">{label}</span> : null}
         </button>
-        <p
-          className="text-caption text-ink-muted"
-          role="note"
-          aria-live="polite"
-        >
-          {disabledReason ?? "Contact WhatsApp indisponible"}
-        </p>
+        {resolvedDisabledReason && !iconOnly ? (
+          <p className="text-caption text-ink-muted" role="note" aria-live="polite">
+            {resolvedDisabledReason}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -167,22 +183,24 @@ export function WhatsAppButton({
           onClick={startFlow}
           disabled={loading}
           aria-label={label}
+          title={iconOnly ? label : undefined}
           className={cn(
             "btn-whatsapp",
             sizeClass,
-            fullWidth && "w-full",
+            fullWidth && !iconOnly && "w-full",
             className,
           )}
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Préparation…
+              {!iconOnly ? "Préparation…" : null}
             </>
           ) : (
             <>
               <WhatsAppIcon className="h-4 w-4" />
-              {label}
+              {!iconOnly ? label : null}
+              {iconOnly ? <span className="sr-only">{label}</span> : null}
             </>
           )}
         </button>

@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/utils/currency";
 import { stockLabelFor } from "@/lib/utils/formatters";
 import { VariantSelector } from "@/components/products/VariantSelector";
 import { QuantityStepper } from "@/components/products/QuantityStepper";
-import { WhatsAppButton } from "@/components/whatsapp/WhatsAppButton";
+import { ProductActions } from "@/components/products/ProductActions";
 import { env } from "@/lib/config/env";
 
 export function ProductPurchasePanel({
@@ -81,6 +81,10 @@ export function ProductPurchasePanel({
         )}
       </div>
 
+      {product.description ? (
+        <p className="text-body text-ink-muted">{product.description}</p>
+      ) : null}
+
       {hasVariants ? (
         <VariantSelector
           variants={product.variants}
@@ -97,15 +101,30 @@ export function ProductPurchasePanel({
       </div>
 
       <div className="sticky bottom-0 -mx-4 border-t border-border bg-surface px-4 py-3 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
-        <WhatsAppButton
-          fullWidth
+        <ProductActions
           size="lg"
+          layout="row"
           shopSlug={product.shop.slug}
           productSlug={product.slug}
           phoneE164={product.shop.whatsappPhoneE164}
           whatsappUrl={product.shop.whatsappUrl}
           disabled={ctaDisabled}
           disabledReason={disabledReason}
+          className="md:max-w-md"
+          cartItem={{
+            shopSlug: product.shop.slug,
+            shopName: product.shop.name,
+            productSlug: product.slug,
+            productName: product.name,
+            productUrl,
+            qty,
+            variantLabel: selectedVariant?.label ?? null,
+            formattedPrice,
+            promoPrice: formattedPromo,
+            currency: product.currency,
+            whatsappPhoneE164: product.shop.whatsappPhoneE164 ?? null,
+            whatsappUrl: product.shop.whatsappUrl ?? null,
+          }}
           message={{
             shopName: product.shop.name,
             productName: product.name,
@@ -116,7 +135,6 @@ export function ProductPurchasePanel({
             promoPrice: formattedPromo ?? undefined,
             stockLabel,
           }}
-          className="md:w-auto md:min-w-[260px]"
         />
       </div>
     </div>
