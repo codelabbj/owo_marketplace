@@ -17,7 +17,9 @@ export function ProductPurchasePanel({
   product: ProductDetail;
 }) {
   const hasVariants = product.variants.length > 0;
-  const [variantId, setVariantId] = useState<string | null>(null);
+  const [variantId, setVariantId] = useState<string | null>(() =>
+    product.variants.find((v) => v.stock > 0)?.id ?? null,
+  );
   const [qty, setQty] = useState(1);
 
   const selectedVariant = useMemo(
@@ -100,17 +102,19 @@ export function ProductPurchasePanel({
         <QuantityStepper value={qty} onChange={setQty} />
       </div>
 
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-surface px-4 py-3 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
+      <div className="space-y-4 border-t border-border pt-6">
+        <p className="text-caption uppercase tracking-wide text-ink-subtle">
+          Commander
+        </p>
         <ProductActions
           size="lg"
-          layout="row"
           shopSlug={product.shop.slug}
           productSlug={product.slug}
           phoneE164={product.shop.whatsappPhoneE164}
           whatsappUrl={product.shop.whatsappUrl}
           disabled={ctaDisabled}
           disabledReason={disabledReason}
-          className="md:max-w-md"
+          className="w-full"
           cartItem={{
             shopSlug: product.shop.slug,
             shopName: product.shop.name,

@@ -28,6 +28,8 @@ export type WhatsAppButtonProps = {
   label?: string;
   disabled?: boolean;
   disabledReason?: string;
+  /** Masque le message d’aide sous le bouton (ex. hint partagé au niveau parent). */
+  hideDisabledHint?: boolean;
   /** Si false, le panier n’inhibe pas ce bouton (ex. checkout panier). */
   respectCartLock?: boolean;
 };
@@ -44,6 +46,7 @@ export function WhatsAppButton({
   label = "Commander sur WhatsApp",
   disabled = false,
   disabledReason,
+  hideDisabledHint = false,
   respectCartLock = true,
 }: WhatsAppButtonProps) {
   const { totalItems } = useCart();
@@ -166,7 +169,7 @@ export function WhatsAppButton({
           {!iconOnly ? label : null}
           {iconOnly ? <span className="sr-only">{label}</span> : null}
         </button>
-        {resolvedDisabledReason && !iconOnly ? (
+        {resolvedDisabledReason && !iconOnly && !hideDisabledHint ? (
           <p className="text-caption text-ink-muted" role="note" aria-live="polite">
             {resolvedDisabledReason}
           </p>
