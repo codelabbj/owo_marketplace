@@ -1,8 +1,12 @@
 import type { CartItem } from "@/schemas/cart.schema";
+import { orderRefLine } from "@/lib/whatsapp/orderRef";
 
 const HEADER = "Bonjour 👋\nJe vous contacte depuis owo.bj.";
 
-export function buildWhatsAppCartMessage(items: CartItem[]): string {
+export function buildWhatsAppCartMessage(
+  items: CartItem[],
+  orderRef: string,
+): string {
   const first = items[0];
   if (!first) return HEADER;
 
@@ -19,6 +23,8 @@ export function buildWhatsAppCartMessage(items: CartItem[]): string {
 
   return [
     HEADER,
+    "",
+    orderRefLine(orderRef),
     "",
     "Je souhaite commander les produits suivants :",
     "",

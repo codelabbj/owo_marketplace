@@ -28,6 +28,8 @@ type CartContextValue = {
   items: CartItem[];
   totalItems: number;
   isOpen: boolean;
+  /** Incrémente à chaque ajout réussi — pour animer le FAB. */
+  attentionTick: number;
   openCart: () => void;
   closeCart: () => void;
   addItem: (input: AddToCartInput) => { ok: true } | { ok: false; reason: string };
@@ -43,6 +45,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [attentionTick, setAttentionTick] = useState(0);
 
   useEffect(() => {
     setItems(normalizeCartItems(getCart().items));
@@ -65,7 +68,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return {
           ok: false,
           reason:
-            "Votre panier contient des produits d'une autre boutique. Videz le panier pour continuer.",
+            "Le panier n’accepte qu’une seule boutique. Videz-le pour ajouter des produits d’une autre boutique.",
         };
       }
 
@@ -82,7 +85,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         formattedPrice: input.formattedPrice || "—",
       };
       persist(mergeCartItem(items, incoming));
-      setIsOpen(true);
+      setAttentionTick((n) => n + 1);
+      // Ne pas ouvrir le tiroir : l’utilisateur finalise via le bouton panier.
       return { ok: true };
     },
     [items, persist],
@@ -125,6 +129,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       totalItems,
       isOpen,
+      attentionTick,
       openCart: () => setIsOpen(true),
       closeCart: () => setIsOpen(false),
       addItem,
@@ -133,7 +138,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       shopSlug: cartShopSlug({ items }),
     }),
-    [items, totalItems, isOpen, addItem, updateQty, removeItem, clearCart],
+    [
+      items,
+      totalItems,
+      isOpen,
+      attentionTick,
+      addItem,
+      updateQty,
+      removeItem,
+      clearCart,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

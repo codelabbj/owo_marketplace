@@ -50,6 +50,11 @@ export function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/help#safety-tips" className="text-ink-muted hover:text-ink">
+                Conseils de sécurité
+              </Link>
+            </li>
+            <li>
               <Link href="/about" className="text-ink-muted hover:text-ink">
                 À propos
               </Link>

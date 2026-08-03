@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { MapPin, Phone, Store } from "lucide-react";
 import type { ShopDetail } from "@/types/domain";
+import { StoreAddressDisclosure } from "@/components/shops/StoreAddressDisclosure";
 
 export function ShopHeader({ shop }: { shop: ShopDetail }) {
   return (
@@ -60,27 +61,24 @@ export function ShopHeader({ shop }: { shop: ShopDetail }) {
         </div>
       </div>
 
-      {(shop.address || shop.contactPhone || shop.description) && (
+      {shop.address ? (
+        <StoreAddressDisclosure address={shop.address} className="mt-5" />
+      ) : null}
+
+      {(shop.contactPhone ||
+        (shop.description && shop.description !== shop.shortDescription)) && (
         <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] md:items-start md:gap-8">
           {shop.description && shop.description !== shop.shortDescription ? (
             <p className="max-w-3xl text-body text-ink-muted">{shop.description}</p>
           ) : (
             <span />
           )}
-          {shop.address || shop.contactPhone ? (
+          {shop.contactPhone ? (
             <ul className="flex flex-wrap gap-x-5 gap-y-2 text-body-sm text-ink-muted md:justify-end">
-              {shop.address ? (
-                <li className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-4 w-4 text-brand-500" aria-hidden />
-                  {shop.address}
-                </li>
-              ) : null}
-              {shop.contactPhone ? (
-                <li className="inline-flex items-center gap-1.5">
-                  <Phone className="h-4 w-4 text-brand-500" aria-hidden />
-                  {shop.contactPhone}
-                </li>
-              ) : null}
+              <li className="inline-flex items-center gap-1.5">
+                <Phone className="h-4 w-4 text-brand-500" aria-hidden />
+                {shop.contactPhone}
+              </li>
             </ul>
           ) : null}
         </div>

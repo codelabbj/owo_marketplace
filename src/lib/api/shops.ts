@@ -14,6 +14,7 @@ import {
   getShopDetailMock,
   listShopsMock,
 } from "@/lib/api/mocks";
+import { filterShopSummaries } from "@/lib/utils/searchMatch";
 
 export type ListShopsParams = {
   query?: string;
@@ -57,7 +58,19 @@ export async function listShops(
         tags: ["shops"],
       });
       try {
-        return PaginatedShopsSchema.parse(json);
+        const parsed = PaginatedShopsSchema.parse(json);
+        // L’ERP peut ignorer `query` : on filtre aussi côté client.
+        if (params.query?.trim()) {
+          const results = filterShopSummaries(parsed.results, params.query);
+          return {
+            ...parsed,
+            count: results.length,
+            next: null,
+            previous: null,
+            results,
+          };
+        }
+        return parsed;
       } catch (parseErr) {
         if (process.env.NODE_ENV === "development") {
           // eslint-disable-next-line no-console

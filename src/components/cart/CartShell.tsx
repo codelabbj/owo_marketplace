@@ -1,8 +1,14 @@
 "use client";
 
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { FloatingCartButton } from "@/components/cart/FloatingCartButton";
 
-/** Panier rendu hors du header pour éviter les problèmes de clipping / backdrop-filter. */
+/** Panier rendu hors du header (drawer + FAB bas-droite). */
 export function CartShell() {
-  return <CartDrawer />;
+  return (
+    <>
+      <CartDrawer />
+      <FloatingCartButton />
+    </>
+  );
 }

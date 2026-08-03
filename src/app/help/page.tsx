@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { MarketplaceLayout } from "@/components/layout/MarketplaceLayout";
+import { SafetyTips } from "@/components/safety/SafetyTips";
 import { env } from "@/lib/config/env";
 
 export const metadata: Metadata = {
   title: "Aide",
-  description: "Comment utiliser Owo Marketplace en quelques étapes simples.",
+  description:
+    "Comment utiliser Owo Marketplace et acheter en toute sécurité.",
   alternates: { canonical: `${env.siteUrl}/help` },
 };
 
@@ -48,6 +50,10 @@ export default function HelpPage() {
             </li>
           ))}
         </ol>
+
+        <div className="mt-12 border-t border-border pt-10">
+          <SafetyTips />
+        </div>
       </article>
     </MarketplaceLayout>
   );

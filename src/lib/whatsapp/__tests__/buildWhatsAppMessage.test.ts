@@ -90,4 +90,12 @@ describe("buildWhatsAppMessage", () => {
     const msg = buildWhatsAppMessage({ ...base, qty: 0 });
     expect(msg).toContain("- Quantité : 1");
   });
+
+  it("includes order reference when provided", () => {
+    const msg = buildWhatsAppMessage({
+      ...base,
+      orderRef: "OWO-260803-DIDI-A7K2",
+    });
+    expect(msg).toContain("Référence commande : OWO-260803-DIDI-A7K2");
+  });
 });

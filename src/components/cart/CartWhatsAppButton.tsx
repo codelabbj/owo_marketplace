@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/whatsapp/WhatsAppIcon";
 import { ContactFallbackModal } from "@/components/whatsapp/ContactFallbackModal";
 import { BuyerProfileModal } from "@/components/whatsapp/BuyerProfileModal";
 import { buildWhatsAppUrl } from "@/lib/whatsapp/buildWhatsAppUrl";
 import { buildWhatsAppCartMessage } from "@/lib/whatsapp/buildWhatsAppCartMessage";
+import { generateOrderRef } from "@/lib/whatsapp/orderRef";
 import { getBuyerProfile, setBuyerProfile } from "@/lib/storage/buyerProfile";
 import { submitContactIntent } from "@/lib/api/contactIntent";
 import type { BuyerProfileStored } from "@/schemas/buyer-profile.schema";
@@ -21,6 +22,10 @@ export function CartWhatsAppButton({
   className?: string;
 }) {
   const { items, clearCart } = useCart();
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef<{ text: string; url: string; orderRef: string } | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [fallbackOpen, setFallbackOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -29,25 +34,34 @@ export function CartWhatsAppButton({
   const first = items[0];
   const phoneE164 = first?.whatsappPhoneE164;
   const whatsappUrl = first?.whatsappUrl;
-  const text = buildWhatsAppCartMessage(items);
-  const url = buildWhatsAppUrl({
-    phoneE164,
-    whatsappUrl,
-    message: text,
-  });
 
-  const openWhatsApp = useCallback(() => {
-    if (!url) return;
+  const preparePayload = useCallback(() => {
+    if (!first) return null;
+    const orderRef = generateOrderRef(first.shopSlug);
+    const text = buildWhatsAppCartMessage(items, orderRef);
+    const url = buildWhatsAppUrl({ phoneE164, whatsappUrl, message: text });
+    if (!url) return null;
+    pendingRef.current = { text, url, orderRef };
+    return pendingRef.current;
+  }, [first, items, phoneE164, whatsappUrl]);
+
+  const openWhatsApp = useCallback((url: string) => {
     try {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       setFallbackOpen(true);
     }
-  }, [url]);
+  }, []);
 
   const runSubmitAndOpen = useCallback(
     async (profile: BuyerProfileStored) => {
-      if (!url || !first) return;
+      if (inFlightRef.current || !first) return;
+      const pending = pendingRef.current ?? preparePayload();
+      if (!pending) {
+        setFallbackOpen(true);
+        return;
+      }
+      inFlightRef.current = true;
       setLoading(true);
       setSubmitError(null);
       try {
@@ -58,25 +72,32 @@ export function CartWhatsAppButton({
             phone_e164: profile.phoneE164,
             shop_slug: item.shopSlug,
             product_slug: item.productSlug,
-            prefilled_message: text,
+            prefilled_message: pending.text,
             product_url: item.productUrl,
           });
         }
-        openWhatsApp();
+        openWhatsApp(pending.url);
         clearCart();
       } catch {
         setSubmitError(
           "L'enregistrement a échoué. Vérifiez votre connexion et réessayez.",
         );
       } finally {
+        inFlightRef.current = false;
         setLoading(false);
       }
     },
-    [url, first, items, text, openWhatsApp, clearCart],
+    [first, items, preparePayload, openWhatsApp, clearCart],
   );
 
   const startFlow = useCallback(() => {
-    if (!url || !first) {
+    if (loading || inFlightRef.current || profileModalOpen) return;
+    if (!first) {
+      setFallbackOpen(true);
+      return;
+    }
+    const pending = preparePayload();
+    if (!pending) {
       setFallbackOpen(true);
       return;
     }
@@ -86,7 +107,7 @@ export function CartWhatsAppButton({
       return;
     }
     void runSubmitAndOpen(stored);
-  }, [url, first, runSubmitAndOpen]);
+  }, [first, preparePayload, runSubmitAndOpen, loading, profileModalOpen]);
 
   if (items.length === 0) return null;
 
@@ -98,6 +119,7 @@ export function CartWhatsAppButton({
         type="button"
         onClick={startFlow}
         disabled={loading || !contactOk}
+        aria-busy={loading}
         className={cn(
           "btn-whatsapp h-11 px-4 text-button",
           fullWidth && "w-full",
@@ -144,7 +166,8 @@ export function CartWhatsAppButton({
         onClose={() => setFallbackOpen(false)}
         onRetry={() => {
           setFallbackOpen(false);
-          openWhatsApp();
+          const url = pendingRef.current?.url;
+          if (url) openWhatsApp(url);
         }}
       />
     </>

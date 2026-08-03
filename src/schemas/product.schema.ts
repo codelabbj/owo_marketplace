@@ -17,6 +17,7 @@ export const ProductSummarySchema = z.object({
   currency: z.string().default("XOF"),
   in_stock: z.boolean().default(true),
   stock_label: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
 });
 
 export const ProductVariantSchema = z.object({

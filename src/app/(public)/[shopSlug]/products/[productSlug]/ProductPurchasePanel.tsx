@@ -9,6 +9,7 @@ import { stockLabelFor } from "@/lib/utils/formatters";
 import { VariantSelector } from "@/components/products/VariantSelector";
 import { QuantityStepper } from "@/components/products/QuantityStepper";
 import { ProductActions } from "@/components/products/ProductActions";
+import { SafetyTips } from "@/components/safety/SafetyTips";
 import { env } from "@/lib/config/env";
 
 export function ProductPurchasePanel({
@@ -83,10 +84,6 @@ export function ProductPurchasePanel({
         )}
       </div>
 
-      {product.description ? (
-        <p className="text-body text-ink-muted">{product.description}</p>
-      ) : null}
-
       {hasVariants ? (
         <VariantSelector
           variants={product.variants}
@@ -140,6 +137,7 @@ export function ProductPurchasePanel({
             stockLabel,
           }}
         />
+        <SafetyTips compact id="product-safety-tips" />
       </div>
     </div>
   );

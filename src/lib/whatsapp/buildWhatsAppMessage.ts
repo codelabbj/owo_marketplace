@@ -1,3 +1,5 @@
+import { orderRefLine } from "@/lib/whatsapp/orderRef";
+
 export type WhatsAppMessagePayload = {
   shopName: string;
   productName: string;
@@ -7,6 +9,8 @@ export type WhatsAppMessagePayload = {
   formattedPrice?: string | null;
   promoPrice?: string | null;
   stockLabel?: string | null;
+  /** Référence commande pour recherche ERP */
+  orderRef?: string | null;
 };
 
 export type WhatsAppTemplate = "promo" | "variant" | "limited" | "simple";
@@ -38,71 +42,92 @@ function priceLine(label: string, value: string | null | undefined): string | nu
   return `- ${label} : ${value}`;
 }
 
+function withOrderRef(lines: Array<string | null>, orderRef?: string | null): string {
+  const cleaned = lines.filter((l): l is string => l !== null);
+  if (!orderRef?.trim()) return cleaned.join("\n");
+  // Juste après l’en-tête + ligne vide
+  const insertAt = Math.min(2, cleaned.length);
+  cleaned.splice(insertAt, 0, orderRefLine(orderRef.trim()), "");
+  return cleaned.join("\n");
+}
+
 export function buildWhatsAppMessage(payload: WhatsAppMessagePayload): string {
   const template = selectTemplate(payload);
   const qty = asQty(payload.qty);
   const price = payload.formattedPrice ?? "—";
+  const ref = payload.orderRef;
 
   switch (template) {
     case "promo": {
-      const lines = [
-        HEADER,
-        "",
-        "Je suis intéressé(e) par votre offre :",
-        `- Boutique : ${payload.shopName}`,
-        `- Produit : ${payload.productName}`,
-        priceLine("Prix promo affiché", payload.promoPrice ?? null),
-        `- Quantité : ${qty}`,
-        `- Lien : ${payload.productUrl}`,
-        "",
-        "Pouvez-vous confirmer le prix final et la disponibilité ?",
-      ].filter((l): l is string => l !== null);
-      return lines.join("\n");
+      return withOrderRef(
+        [
+          HEADER,
+          "",
+          "Je suis intéressé(e) par votre offre :",
+          `- Boutique : ${payload.shopName}`,
+          `- Produit : ${payload.productName}`,
+          priceLine("Prix promo affiché", payload.promoPrice ?? null),
+          `- Quantité : ${qty}`,
+          `- Lien : ${payload.productUrl}`,
+          "",
+          "Pouvez-vous confirmer le prix final et la disponibilité ?",
+        ],
+        ref,
+      );
     }
     case "variant": {
-      return [
-        HEADER,
-        "",
-        "Je souhaite commander ce produit :",
-        `- Boutique : ${payload.shopName}`,
-        `- Produit : ${payload.productName}`,
-        `- Variante : ${payload.variantLabel}`,
-        `- Quantité : ${qty}`,
-        `- Prix affiché : ${price}`,
-        `- Lien : ${payload.productUrl}`,
-        "",
-        "Merci de me confirmer la disponibilité de cette variante.",
-      ].join("\n");
+      return withOrderRef(
+        [
+          HEADER,
+          "",
+          "Je souhaite commander ce produit :",
+          `- Boutique : ${payload.shopName}`,
+          `- Produit : ${payload.productName}`,
+          `- Variante : ${payload.variantLabel}`,
+          `- Quantité : ${qty}`,
+          `- Prix affiché : ${price}`,
+          `- Lien : ${payload.productUrl}`,
+          "",
+          "Merci de me confirmer la disponibilité de cette variante.",
+        ],
+        ref,
+      );
     }
     case "limited": {
-      return [
-        HEADER,
-        "",
-        "Je veux commander :",
-        `- Boutique : ${payload.shopName}`,
-        `- Produit : ${payload.productName}`,
-        `- Quantité : ${qty}`,
-        `- Prix affiché : ${price}`,
-        `- Info stock : ${payload.stockLabel}`,
-        `- Lien : ${payload.productUrl}`,
-        "",
-        "Merci de me confirmer rapidement la disponibilité.",
-      ].join("\n");
+      return withOrderRef(
+        [
+          HEADER,
+          "",
+          "Je veux commander :",
+          `- Boutique : ${payload.shopName}`,
+          `- Produit : ${payload.productName}`,
+          `- Quantité : ${qty}`,
+          `- Prix affiché : ${price}`,
+          `- Info stock : ${payload.stockLabel}`,
+          `- Lien : ${payload.productUrl}`,
+          "",
+          "Merci de me confirmer rapidement la disponibilité.",
+        ],
+        ref,
+      );
     }
     case "simple":
     default: {
-      return [
-        HEADER,
-        "",
-        "Je souhaite commander ce produit :",
-        `- Boutique : ${payload.shopName}`,
-        `- Produit : ${payload.productName}`,
-        `- Quantité : ${qty}`,
-        `- Prix affiché : ${price}`,
-        `- Lien : ${payload.productUrl}`,
-        "",
-        "Merci de me confirmer la disponibilité.",
-      ].join("\n");
+      return withOrderRef(
+        [
+          HEADER,
+          "",
+          "Je souhaite commander ce produit :",
+          `- Boutique : ${payload.shopName}`,
+          `- Produit : ${payload.productName}`,
+          `- Quantité : ${qty}`,
+          `- Prix affiché : ${price}`,
+          `- Lien : ${payload.productUrl}`,
+          "",
+          "Merci de me confirmer la disponibilité.",
+        ],
+        ref,
+      );
     }
   }
 }

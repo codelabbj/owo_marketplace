@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 import { ContactFallbackModal } from "./ContactFallbackModal";
@@ -15,6 +15,7 @@ import { getBuyerProfile, setBuyerProfile } from "@/lib/storage/buyerProfile";
 import { submitContactIntent } from "@/lib/api/contactIntent";
 import type { BuyerProfileStored } from "@/schemas/buyer-profile.schema";
 import { useCart } from "@/contexts/CartContext";
+import { generateOrderRef } from "@/lib/whatsapp/orderRef";
 
 export type WhatsAppButtonProps = {
   shopSlug: string;
@@ -28,9 +29,7 @@ export type WhatsAppButtonProps = {
   label?: string;
   disabled?: boolean;
   disabledReason?: string;
-  /** Masque le message d’aide sous le bouton (ex. hint partagé au niveau parent). */
   hideDisabledHint?: boolean;
-  /** Si false, le panier n’inhibe pas ce bouton (ex. checkout panier). */
   respectCartLock?: boolean;
 };
 
@@ -51,6 +50,8 @@ export function WhatsAppButton({
 }: WhatsAppButtonProps) {
   const { totalItems } = useCart();
   const cartBlocksProduct = respectCartLock && totalItems > 0;
+  const inFlightRef = useRef(false);
+  const pendingRef = useRef<{ text: string; url: string } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [fallbackOpen, setFallbackOpen] = useState(false);
@@ -65,26 +66,34 @@ export function WhatsAppButton({
     ? "Commandez depuis votre panier"
     : disabledReason;
 
-  const text = buildWhatsAppMessage(message);
-  const url = buildWhatsAppUrl({ phoneE164, whatsappUrl, message: text });
+  const preparePayload = useCallback(() => {
+    const orderRef = message.orderRef?.trim() || generateOrderRef(shopSlug);
+    const text = buildWhatsAppMessage({ ...message, orderRef });
+    const url = buildWhatsAppUrl({ phoneE164, whatsappUrl, message: text });
+    if (!url) return null;
+    pendingRef.current = { text, url };
+    return pendingRef.current;
+  }, [message, shopSlug, phoneE164, whatsappUrl]);
 
-  const openWhatsApp = useCallback(() => {
-    if (!url) return;
+  const openWhatsApp = useCallback((url: string) => {
     try {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       setFallbackOpen(true);
       setErrorMsg("Impossible d'ouvrir WhatsApp");
     }
-  }, [url]);
+  }, []);
 
   const runSubmitAndOpen = useCallback(
     async (profile: BuyerProfileStored) => {
-      if (!url) {
+      if (inFlightRef.current) return;
+      const pending = pendingRef.current ?? preparePayload();
+      if (!pending) {
         setFallbackOpen(true);
         setErrorMsg("Impossible d'ouvrir WhatsApp");
         return;
       }
+      inFlightRef.current = true;
       setLoading(true);
       setSubmitError(null);
       setErrorMsg(null);
@@ -95,23 +104,26 @@ export function WhatsAppButton({
           phone_e164: profile.phoneE164,
           shop_slug: shopSlug,
           product_slug: productSlug,
-          prefilled_message: text,
+          prefilled_message: pending.text,
           product_url: message.productUrl,
         });
-        openWhatsApp();
+        openWhatsApp(pending.url);
       } catch {
         setSubmitError(
           "L'enregistrement de votre demande a échoué. Vérifiez votre connexion et réessayez.",
         );
       } finally {
+        inFlightRef.current = false;
         setLoading(false);
       }
     },
-    [url, shopSlug, productSlug, text, message.productUrl, openWhatsApp],
+    [preparePayload, shopSlug, productSlug, message.productUrl, openWhatsApp],
   );
 
   const startFlow = useCallback(() => {
-    if (!url) {
+    if (loading || inFlightRef.current || profileModalOpen) return;
+    const pending = preparePayload();
+    if (!pending) {
       setFallbackOpen(true);
       setErrorMsg("Impossible d'ouvrir WhatsApp");
       return;
@@ -122,7 +134,7 @@ export function WhatsAppButton({
       return;
     }
     void runSubmitAndOpen(stored);
-  }, [url, runSubmitAndOpen]);
+  }, [preparePayload, runSubmitAndOpen, loading, profileModalOpen]);
 
   const onProfileSaved = useCallback(
     (profile: BuyerProfileStored) => {
@@ -132,11 +144,6 @@ export function WhatsAppButton({
     },
     [runSubmitAndOpen],
   );
-
-  const retryOpen = useCallback(() => {
-    if (!url) return;
-    openWhatsApp();
-  }, [url, openWhatsApp]);
 
   const sizeClass =
     size === "icon"
@@ -185,6 +192,7 @@ export function WhatsAppButton({
           type="button"
           onClick={startFlow}
           disabled={loading}
+          aria-busy={loading}
           aria-label={label}
           title={iconOnly ? label : undefined}
           className={cn(
@@ -229,7 +237,8 @@ export function WhatsAppButton({
         onClose={() => setFallbackOpen(false)}
         onRetry={() => {
           setFallbackOpen(false);
-          retryOpen();
+          const url = pendingRef.current?.url;
+          if (url) openWhatsApp(url);
         }}
       />
     </>

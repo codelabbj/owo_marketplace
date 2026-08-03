@@ -78,6 +78,7 @@ export function toProductSummary(dto: ProductSummaryDTO): ProductSummary {
     currency: dto.currency,
     inStock: dto.in_stock,
     stockLabel: dto.stock_label ?? null,
+    category: dto.category || null,
   };
 }
 
