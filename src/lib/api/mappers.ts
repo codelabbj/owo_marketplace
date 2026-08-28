@@ -96,7 +96,7 @@ export function toProductDetail(dto: ProductDetailDTO): ProductDetail {
     variants: dto.variants.map((v) => ({
       id: v.id,
       label: v.label,
-      price: v.price,
+      price: v.price ?? dto.price,
       stock: v.stock,
     })),
     shop: {

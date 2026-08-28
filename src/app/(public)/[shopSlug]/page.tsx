@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getShop } from "@/lib/api/shops";
 import { ApiError } from "@/lib/api/client";
-import { ShopHeader } from "@/components/shops/ShopHeader";
+import { ShopAside, ShopHeader } from "@/components/shops/ShopHeader";
 import { ProductCard } from "@/components/products/ProductCard";
 import { EmptyState } from "@/components/states/EmptyState";
 import {
@@ -82,42 +82,49 @@ export default async function ShopPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="container py-8">
+    <div>
       <ShopHeader shop={shop} />
 
-      <section className="mt-8">
-        <div className="mb-4 flex items-end justify-between">
-          <h2 className="text-h2">Catalogue</h2>
-          <span className="text-body-sm text-ink-muted">
-            {products.length} produit{products.length > 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {products.length === 0 ? (
-          <EmptyState
-            title="Aucun produit pour le moment"
-            description="Cette boutique n'a publié aucun produit."
-            action={
-              <Link href="/shops" className="btn-primary">
-                Découvrir d&apos;autres boutiques
-              </Link>
-            }
-          />
-        ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                shopSlug={shop.slug}
-                shopName={shop.name}
-                whatsappPhoneE164={shop.whatsappPhoneE164}
-                whatsappUrl={shop.whatsappUrl}
-              />
-            ))}
+      <div className="mp-wrap grid gap-12 py-10 md:py-12 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <section>
+          <div className="mb-0 flex items-end justify-between border-b-2 border-ink pb-3.5">
+            <h2 className="font-display text-[28px] font-extrabold tracking-[-0.035em]">Catalogue</h2>
+            <span className="text-[13px] text-ink-muted">
+              {products.length} produit{products.length > 1 ? "s" : ""}
+            </span>
           </div>
-        )}
-      </section>
+
+          {products.length === 0 ? (
+            <div className="py-8">
+              <EmptyState
+                title="Aucun produit pour le moment"
+                description="Cette boutique n'a publié aucun produit."
+                action={
+                  <Link href="/shops" className="btn-primary">
+                    Découvrir d&apos;autres boutiques
+                  </Link>
+                }
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 border-l border-border md:grid-cols-3">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  shopSlug={shop.slug}
+                  shopName={shop.name}
+                  shopCity={shop.city}
+                  whatsappPhoneE164={shop.whatsappPhoneE164}
+                  whatsappUrl={shop.whatsappUrl}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <ShopAside shop={shop} />
+      </div>
 
       <script
         type="application/ld+json"

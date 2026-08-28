@@ -16,15 +16,15 @@ export function QuantityStepper({
 }) {
   const setSafe = (n: number) => onChange(clamp(n, min, max));
   return (
-    <div className="inline-flex items-center rounded-full border border-border bg-surface">
+    <div className="inline-flex items-center border border-ink bg-surface">
       <button
         type="button"
         onClick={() => setSafe(value - 1)}
         disabled={value <= min}
         aria-label="Diminuer la quantité"
-        className="grid h-10 w-10 place-items-center rounded-l-full text-ink-muted hover:bg-surface-subtle disabled:opacity-50"
+        className="grid h-10 w-10 place-items-center text-ink hover:bg-surface-muted disabled:opacity-50"
       >
-        <Minus className="h-4 w-4" />
+        <Minus className="h-3.5 w-3.5" />
       </button>
       <input
         type="number"
@@ -37,14 +37,14 @@ export function QuantityStepper({
           if (Number.isFinite(n)) setSafe(n);
         }}
         aria-label="Quantité"
-        className="h-10 w-12 border-x border-border bg-surface text-center text-button text-ink focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="h-10 w-10 bg-surface text-center text-[15px] font-bold tabular-nums text-ink focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"
         onClick={() => setSafe(value + 1)}
         disabled={value >= max}
         aria-label="Augmenter la quantité"
-        className="grid h-10 w-10 place-items-center rounded-r-full text-ink-muted hover:bg-surface-subtle disabled:opacity-50"
+        className="grid h-10 w-10 place-items-center text-ink hover:bg-surface-muted disabled:opacity-50"
       >
         <Plus className="h-4 w-4" />
       </button>

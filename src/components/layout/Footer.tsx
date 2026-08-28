@@ -3,94 +3,82 @@ import Image from "next/image";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border bg-surface-subtle">
-      <div className="container grid gap-8 py-12 md:grid-cols-4">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 font-bold">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 object-contain"
-            />
-            <span className="text-h3">
-              owo<span className="text-brand-500">.</span>bj
+    <footer className="mp-band mt-0">
+      <div className="mp-wrap grid gap-10 py-14 md:grid-cols-4">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+            <span className="font-display text-[20px] font-extrabold tracking-[-0.045em]">
+              Owo<span className="text-brand-500">.</span>Shop
             </span>
           </div>
-          <p className="text-body-sm text-ink-muted">
-            La marketplace qui connecte vendeurs et clients en un clic via WhatsApp.
+          <p className="max-w-[34ch] text-[14px] leading-relaxed text-white/65">
+            La marketplace des vendeurs vérifiés du Bénin. Vous discutez, vous vérifiez, vous payez à la livraison.
           </p>
         </div>
         <div>
-          <h3 className="mb-3 text-caption uppercase tracking-wide text-ink-subtle">
-            Découvrir
-          </h3>
-          <ul className="space-y-2 text-body-sm">
+          <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Découvrir</h3>
+          <ul className="space-y-2 text-[14px] text-white/70">
             <li>
-              <Link href="/shops" className="text-ink-muted hover:text-ink">
+              <Link href="/shops" className="hover:text-brand-500">
                 Toutes les boutiques
               </Link>
             </li>
             <li>
-              <Link href="/" className="text-ink-muted hover:text-ink">
+              <Link href="/" className="hover:text-brand-500">
                 Accueil
               </Link>
             </li>
           </ul>
         </div>
         <div>
-          <h3 className="mb-3 text-caption uppercase tracking-wide text-ink-subtle">
-            Aide
-          </h3>
-          <ul className="space-y-2 text-body-sm">
+          <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Confiance</h3>
+          <ul className="space-y-2 text-[14px] text-white/70">
             <li>
-              <Link href="/help" className="text-ink-muted hover:text-ink">
-                Centre d&apos;aide
+              <Link href="/help" className="hover:text-brand-500">
+                Comment on vérifie
               </Link>
             </li>
             <li>
-              <Link href="/help#safety-tips" className="text-ink-muted hover:text-ink">
+              <Link href="/help#safety-tips" className="hover:text-brand-500">
                 Conseils de sécurité
               </Link>
             </li>
             <li>
-              <Link href="/about" className="text-ink-muted hover:text-ink">
+              <Link href="/about" className="hover:text-brand-500">
                 À propos
               </Link>
             </li>
           </ul>
         </div>
         <div>
-          <h3 className="mb-3 text-caption uppercase tracking-wide text-ink-subtle">
-            Légal
-          </h3>
-          <ul className="space-y-2 text-body-sm">
+          <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white/50">Légal</h3>
+          <ul className="space-y-2 text-[14px] text-white/70">
             <li>
-              <Link href="/terms" className="text-ink-muted hover:text-ink">
+              <Link href="/terms" className="hover:text-brand-500">
                 Conditions d&apos;utilisation
               </Link>
             </li>
             <li>
-              <Link href="/privacy" className="text-ink-muted hover:text-ink">
+              <Link href="/privacy" className="hover:text-brand-500">
                 Politique de confidentialité
               </Link>
             </li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-border">
-        <div className="container flex flex-col items-center justify-between gap-2 py-6 text-caption text-ink-subtle md:flex-row">
-          <p>© {new Date().getFullYear()} Owo Marketplace. Tous droits réservés.</p>
+      <div className="border-t border-white/15">
+        <div className="mp-wrap flex flex-col items-start justify-between gap-2 py-6 text-[11.5px] text-white/50 md:flex-row md:items-center">
+          <p>© {new Date().getFullYear()} Owo.Shop. Tous droits réservés.</p>
           <p>
-            Développé par{" "}
+            Construit avec{" "}
             <a
               href="https://codelab.bj/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+              className="font-medium text-brand-500 hover:text-white"
             >
-              codelabbj
+              CodeLab
             </a>
           </p>
         </div>

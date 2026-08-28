@@ -1,17 +1,24 @@
 import { z } from "zod";
 
+/** Même origine que `erp_crm_frontend` (`VITE_DEV_API_PROXY_TARGET` / prod). */
+const ERP_API_BASE_URL = "https://api.erp.codelab.bj";
+const DEFAULT_SITE_URL = "https://owo.bj";
+
+const blankToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
 const EnvSchema = z.object({
-  NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: z
-    .string()
-    .url()
-    .default("https://api.erp.codelab.bj"),
-  NEXT_PUBLIC_SITE_URL: z.string().url().default("https://owo.bj"),
+  NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: z.preprocess(
+    blankToUndefined,
+    z.string().url().default(ERP_API_BASE_URL),
+  ),
+  NEXT_PUBLIC_SITE_URL: z.preprocess(
+    blankToUndefined,
+    z.string().url().default(DEFAULT_SITE_URL),
+  ),
   NEXT_PUBLIC_USE_MOCKS: z
     .union([z.string(), z.undefined()])
-    .transform((v) => {
-      if (v === undefined) return false;
-      return v.trim().toLowerCase() === "true";
-    }),
+    .transform((v) => v?.trim().toLowerCase() === "true"),
 });
 
 const parsed = EnvSchema.safeParse({
@@ -29,8 +36,8 @@ if (!parsed.success) {
 const safe = parsed.success
   ? parsed.data
   : {
-      NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: "https://api.erp.codelab.bj",
-      NEXT_PUBLIC_SITE_URL: "https://owo.bj",
+      NEXT_PUBLIC_MARKETPLACE_API_BASE_URL: ERP_API_BASE_URL,
+      NEXT_PUBLIC_SITE_URL: DEFAULT_SITE_URL,
       NEXT_PUBLIC_USE_MOCKS: false,
     };
 

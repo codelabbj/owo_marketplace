@@ -17,15 +17,15 @@ et commandent directement via WhatsApp — sans création de compte ni panier.
 npm install
 ```
 
-Crée le fichier `.env.local` (déjà fourni avec des valeurs par défaut) :
+Copie `.env.example` vers `.env.local` si tu veux surcharger le backend (même API que `erp_crm_frontend`) :
 
 ```bash
-NEXT_PUBLIC_MARKETPLACE_API_BASE_URL=https://api.owo.bj
-NEXT_PUBLIC_SITE_URL=https://owo.bj
-NEXT_PUBLIC_USE_MOCKS=true
+NEXT_PUBLIC_MARKETPLACE_API_BASE_URL=https://api.erp.codelab.bj
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_USE_MOCKS=false
 ```
 
-> Quand le backend marketplace est branché, passe `NEXT_PUBLIC_USE_MOCKS=false`.
+> Par défaut (`.env.development` / `.env.production`) la marketplace appelle déjà `https://api.erp.codelab.bj`. Pour un Django local : `http://127.0.0.1:8000`.
 
 ## Scripts
 
@@ -101,11 +101,12 @@ notification `aria-live`.
 
 ## Backend / mocks
 
-- Tant que `NEXT_PUBLIC_USE_MOCKS=true`, l'app sert des données réalistes via
-  `src/lib/api/mocks.ts` (6 boutiques, ~11 produits, variantes, promos, ruptures).
+- La marketplace consomme l’API publique ERP : `GET/POST /api/marketplace/*`
+  sur `https://api.erp.codelab.bj` (identique au frontend `erp_crm_frontend`).
+- `NEXT_PUBLIC_USE_MOCKS=true` sert uniquement de secours local via
+  `src/lib/api/mocks.ts`. Laisse-le à `false` en usage normal.
 - Les payloads passent toujours par les schémas Zod (`src/schemas/`) avant
-  consommation UI. Bouger vers une API réelle ne demande qu'à mettre
-  `NEXT_PUBLIC_USE_MOCKS=false`.
+  consommation UI.
 - En cas de 5xx côté backend réel, l'app dégrade gracieusement vers les mocks
   pour préserver l'expérience.
 

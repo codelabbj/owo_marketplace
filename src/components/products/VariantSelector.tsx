@@ -16,8 +16,8 @@ export function VariantSelector({
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-caption uppercase tracking-wide text-ink-subtle">
-        Variante
+      <legend className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-subtle">
+        Taille / variante
       </legend>
       <div role="radiogroup" className="flex flex-wrap gap-2">
         {variants.map((variant) => {
@@ -33,11 +33,11 @@ export function VariantSelector({
               disabled={disabled}
               onClick={() => onSelect(variant.id)}
               className={cn(
-                "inline-flex h-10 min-w-[56px] items-center justify-center rounded-full border px-4 text-button transition-all duration-160 ease-out",
+                "inline-flex h-11 min-w-[56px] items-center justify-center border px-3.5 text-[14px] font-bold",
                 selected
-                  ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
-                  : "border-border bg-surface text-ink hover:border-ink-subtle",
-                disabled && "opacity-50",
+                  ? "border-ink bg-ink text-surface"
+                  : "border-ink bg-transparent text-ink hover:bg-surface-muted",
+                disabled && "opacity-40 line-through",
               )}
             >
               {variant.label}

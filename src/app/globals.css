@@ -4,36 +4,36 @@
 
 @layer base {
   :root {
-    /* Brand stays the same in both themes */
     --brand-500: #f97316;
     --brand-600: #ea580c;
+    --brand-700: #c2410c;
+    --verify: #1c7a4b;
 
-    /* Theme tokens — RGB triplets so Tailwind <alpha-value> works */
-    --color-surface: 255 255 255;
-    --color-surface-subtle: 248 250 252;
-    --color-surface-muted: 241 245 249;
-    --color-ink: 15 23 42;
-    --color-ink-muted: 71 85 105;
-    --color-ink-subtle: 100 116 139;
-    --color-border: 226 232 240;
-    --color-border-subtle: 238 242 246;
+    --color-surface: 251 249 246;
+    --color-surface-subtle: 255 255 255;
+    --color-surface-muted: 239 234 226;
+    --color-ink: 23 20 15;
+    --color-ink-muted: 92 85 75;
+    --color-ink-subtle: 139 131 120;
+    --color-border: 228 222 212;
+    --color-border-subtle: 228 222 212;
 
-    --radius-md: 10px;
-    --radius-lg: 16px;
-    --radius-full: 9999px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-full: 0px;
 
     color-scheme: light;
   }
 
   html.dark {
-    --color-surface: 11 18 32; /* near slate-950 */
-    --color-surface-subtle: 17 24 39; /* slate-900 */
-    --color-surface-muted: 30 41 59; /* slate-800 */
-    --color-ink: 248 250 252; /* slate-50 */
-    --color-ink-muted: 203 213 225; /* slate-300 */
-    --color-ink-subtle: 148 163 184; /* slate-400 */
-    --color-border: 51 65 85; /* slate-700 */
-    --color-border-subtle: 30 41 59; /* slate-800 */
+    --color-surface: 20 17 13;
+    --color-surface-subtle: 28 24 19;
+    --color-surface-muted: 42 36 30;
+    --color-ink: 247 244 239;
+    --color-ink-muted: 200 192 180;
+    --color-ink-subtle: 139 131 120;
+    --color-border: 58 50 42;
+    --color-border-subtle: 58 50 42;
 
     color-scheme: dark;
   }
@@ -45,80 +45,114 @@
   body {
     background-color: rgb(var(--color-surface));
     color: rgb(var(--color-ink));
-    font-family:
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      Roboto,
-      "Helvetica Neue",
-      Arial,
-      sans-serif;
+    font-family: var(--font-sans), "Public Sans", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display), Archivo, ui-sans-serif, sans-serif;
+    letter-spacing: -0.04em;
   }
 
   *:focus-visible {
     outline: 2px solid var(--brand-500);
     outline-offset: 2px;
-    border-radius: 6px;
   }
 
   button:disabled,
   [aria-disabled="true"] {
     cursor: not-allowed;
   }
+
+  ::selection {
+    background: #f97316;
+    color: #fff;
+  }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 rounded-full px-4 py-2 text-button transition-all duration-160 ease-out disabled:opacity-50 active:scale-[0.98];
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-none px-4 py-2 text-button transition-colors duration-160 ease-out disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-brand-500 text-white hover:bg-brand-600;
+    @apply btn bg-ink text-surface hover:bg-brand-500 hover:text-white;
   }
   .btn-secondary {
-    @apply btn bg-ink text-surface hover:bg-ink/90;
+    @apply btn border border-ink bg-transparent text-ink hover:bg-ink hover:text-surface;
   }
   .btn-outline {
-    @apply btn border border-border bg-surface text-ink hover:bg-surface-subtle;
+    @apply btn border border-ink bg-transparent text-ink hover:bg-ink hover:text-surface;
   }
   .btn-ghost {
-    @apply btn text-ink hover:bg-surface-subtle;
+    @apply btn text-ink hover:bg-surface-muted;
   }
   .btn-whatsapp {
     @apply btn bg-whatsapp text-white hover:bg-whatsapp-dark;
   }
 
   .card {
-    @apply rounded-lg border border-border bg-surface shadow-card transition-shadow duration-160 ease-out hover:shadow-card-hover;
+    @apply rounded-none border border-border bg-surface-subtle;
   }
 
   .input {
-    @apply h-12 w-full rounded-md border border-border bg-surface px-4 text-body text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+    @apply h-12 w-full rounded-none border border-ink bg-surface-subtle px-4 text-body text-ink placeholder:text-ink-subtle focus:border-brand-500 focus:outline-none focus:ring-0;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-1 text-caption;
+    @apply inline-flex items-center rounded-none px-2 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em];
   }
   .badge-promo {
-    @apply badge bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300;
+    @apply badge bg-brand-500 text-white;
   }
   .badge-rupture {
-    @apply badge bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300;
+    @apply badge bg-ink text-surface;
   }
   .badge-new {
-    @apply badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300;
+    @apply badge bg-emerald-700 text-white;
   }
   .badge-stock {
-    @apply badge bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300;
+    @apply badge bg-amber-100 text-amber-900;
   }
 
   .container-page {
     @apply container;
   }
 
+  .mp-wrap {
+    @apply mx-auto w-full max-w-[1320px] px-4 md:px-8;
+  }
+
+  .mp-kicker {
+    @apply text-[11.5px] font-bold uppercase tracking-[0.16em] text-brand-500;
+  }
+
+  .mp-kicker-muted {
+    @apply text-[11.5px] font-bold uppercase tracking-[0.16em] text-ink-subtle;
+  }
+
+  /** Bande sombre (confiance, footer) : reste sombre en dark mode. */
+  .mp-band {
+    background-color: #17140f;
+    color: #f7f4ef;
+  }
+  html.dark .mp-band {
+    background-color: #0c0a08;
+    color: #f7f4ef;
+  }
+
+  .mp-section-head {
+    @apply mb-0 flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-[18px];
+  }
+
+  .mp-verified {
+    @apply inline-flex items-center gap-1 border border-[#1C7A4B] px-1.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#1C7A4B];
+  }
+
   .skeleton {
-    @apply animate-pulse rounded-md bg-surface-muted;
+    @apply animate-pulse rounded-none bg-surface-muted;
   }
 
   .line-clamp-2 {

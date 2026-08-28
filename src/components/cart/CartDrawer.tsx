@@ -75,12 +75,12 @@ export function CartDrawer() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-drawer-title"
-        className="relative flex h-full max-h-[100dvh] w-full max-w-md flex-col border-l border-border bg-surface shadow-card-hover"
+        className="relative flex h-full max-h-[100dvh] w-full max-w-md flex-col border-l border-ink bg-surface"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-ink px-4 py-4">
           <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-brand-600" />
-            <h2 id="cart-drawer-title" className="text-h3">
+            <ShoppingBag className="h-5 w-5" />
+            <h2 id="cart-drawer-title" className="font-display text-[22px] font-extrabold tracking-[-0.03em]">
               Panier ({totalItems})
             </h2>
           </div>
@@ -88,7 +88,7 @@ export function CartDrawer() {
             type="button"
             onClick={closeCart}
             aria-label="Fermer"
-            className="rounded-md p-1 text-ink-muted hover:bg-surface-subtle"
+            className="p-1 text-ink-muted hover:bg-surface-muted"
           >
             <X className="h-5 w-5" />
           </button>
@@ -114,7 +114,7 @@ export function CartDrawer() {
                 {items.map((item, index) => (
                   <li
                     key={item.lineId || `${item.productSlug}-${index}`}
-                    className="rounded-lg border border-border bg-surface-subtle p-3"
+                    className="border border-border bg-surface p-3"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -152,7 +152,7 @@ export function CartDrawer() {
                         type="button"
                         aria-label="Diminuer la quantité"
                         disabled={item.qty <= 1}
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border bg-surface text-ink disabled:opacity-40"
+                        className="grid h-8 w-8 place-items-center border border-ink bg-surface text-ink disabled:opacity-40"
                         onClick={() => updateQty(item.lineId, item.qty - 1)}
                       >
                         <Minus className="h-3.5 w-3.5" />
@@ -163,7 +163,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         aria-label="Augmenter la quantité"
-                        className="grid h-8 w-8 place-items-center rounded-md border border-border bg-surface text-ink"
+                        className="grid h-8 w-8 place-items-center border border-ink bg-surface text-ink"
                         onClick={() => updateQty(item.lineId, item.qty + 1)}
                       >
                         <Plus className="h-3.5 w-3.5" />

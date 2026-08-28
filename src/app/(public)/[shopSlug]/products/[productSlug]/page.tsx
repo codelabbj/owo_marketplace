@@ -88,59 +88,73 @@ export default async function ProductPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="container py-8">
+    <div className="mp-wrap pb-[72px]">
       <ProductBreadcrumbs
         shopName={product.shop.name}
         shopSlug={shopSlug}
         productName={product.name}
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <ProductGallery images={product.images} alt={product.name} />
-        <div className="lg:pt-2">
+      <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="lg:border-r lg:border-border lg:pr-10">
+          <ProductGallery images={product.images} alt={product.name} />
+
+          {product.description.trim() ? (
+            <section className="mt-10">
+              <h2 className="mb-3.5 border-b-2 border-ink pb-2.5 font-display text-[22px] font-extrabold tracking-[-0.03em]">
+                Description du vendeur
+              </h2>
+              <p className="m-0 max-w-[62ch] whitespace-pre-line text-[15.5px] leading-relaxed text-ink-muted">
+                {product.description}
+              </p>
+            </section>
+          ) : null}
+
+          {product.variants.length > 0 ? (
+            <section className="mt-9">
+              <h2 className="mb-3.5 border-b-2 border-ink pb-2.5 font-display text-[22px] font-extrabold tracking-[-0.03em]">
+                Disponibilité
+              </h2>
+              <table className="w-full border-collapse text-[14px]">
+                <tbody>
+                  {product.variants.map((v) => (
+                    <tr key={v.id} className="border-b border-border">
+                      <td className="py-3 font-semibold">{v.label}</td>
+                      <td className="py-3 tabular-nums text-ink-muted">
+                        {formatPrice(v.price, product.currency)}
+                      </td>
+                      <td
+                        className={`py-3 text-right font-semibold ${v.stock > 0 ? "text-[#1C7A4B]" : "text-red-700"}`}
+                      >
+                        {v.stock > 0 ? `${v.stock} en stock` : "Rupture"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          ) : null}
+
+          <p className="mt-8 text-[13px] text-ink-muted">
+            Prix affiché :{" "}
+            <strong className="text-ink">{formatPrice(product.price, product.currency)}</strong>
+            . Le prix final et la livraison se confirment avec le vendeur sur WhatsApp.
+          </p>
+        </div>
+
+        <div className="border-t border-border pt-8 lg:border-t-0 lg:pl-8 lg:pt-8">
           <ProductPurchasePanel product={product} />
         </div>
       </div>
 
-      {product.description.trim() ? (
-        <section className="mt-12 rounded-lg border border-border bg-surface-subtle p-6">
-          <h2 className="text-h2">Description</h2>
-          <div className="mt-4 whitespace-pre-line text-body leading-relaxed text-ink-muted">
-            {product.description}
-          </div>
-        </section>
-      ) : null}
-
-      {product.variants.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-h2">Variantes disponibles</h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {product.variants.map((v) => (
-              <li
-                key={v.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3"
-              >
-                <span className="font-medium text-ink">{v.label}</span>
-                <span className="text-body-sm text-ink-muted">
-                  {formatPrice(v.price, product.currency)}
-                  {v.stock > 0 ? ` · ${v.stock} en stock` : " · Rupture"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <p className="mt-8 text-body-sm text-ink-muted">
-        Prix indicatif :{" "}
-        <strong>{formatPrice(product.price, product.currency)}</strong>. Le
-        prix final sera confirmé par le vendeur sur WhatsApp.
-      </p>
-
       {otherProducts.length > 0 ? (
-        <section className="mt-12">
-          <h2 className="text-h2">Autres produits de cette boutique</h2>
-          <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <section className="mt-16">
+          <div className="mp-section-head">
+            <h2 className="font-display text-[28px] font-extrabold tracking-[-0.035em]">
+              Dans la même boutique
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 border-l border-border md:grid-cols-3 lg:grid-cols-4">
             {otherProducts.map((p) => (
               <ProductCard
                 key={p.id}

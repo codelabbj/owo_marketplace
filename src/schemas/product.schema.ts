@@ -6,6 +6,8 @@ const optionalUrl = z.preprocess(
 );
 
 const money = z.coerce.number().nonnegative();
+/** DRF sérialise souvent le stock en décimal (`"20.00"` / `20.0`). */
+const stockQty = z.coerce.number().nonnegative().default(0);
 
 export const ProductSummarySchema = z.object({
   id: z.string(),
@@ -23,8 +25,8 @@ export const ProductSummarySchema = z.object({
 export const ProductVariantSchema = z.object({
   id: z.string(),
   label: z.string(),
-  price: money,
-  stock: z.coerce.number().int().nonnegative().default(0),
+  price: money.nullable().optional(),
+  stock: stockQty,
 });
 
 export const ProductDetailSchema = z.object({
@@ -36,7 +38,7 @@ export const ProductDetailSchema = z.object({
   price: money,
   promo_price: money.nullable().optional(),
   currency: z.string().default("XOF"),
-  stock: z.coerce.number().int().nonnegative().default(0),
+  stock: stockQty,
   in_stock: z.boolean().optional(),
   variants: z.array(ProductVariantSchema).default([]),
   shop: z.object({

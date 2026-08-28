@@ -48,7 +48,7 @@ export function ProductGallery({
 
   if (count === 0 || !main) {
     return (
-      <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-surface-muted text-ink-subtle">
+      <div className="flex aspect-[4/5] w-full items-center justify-center bg-surface-muted text-ink-subtle">
         Aucune image
       </div>
     );
@@ -56,53 +56,10 @@ export function ProductGallery({
 
   return (
     <>
-      <div className="space-y-3">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            className="group relative block aspect-square w-full overflow-hidden rounded-lg bg-surface-muted"
-            aria-label="Agrandir l'image"
-          >
-            <ProductImage
-              src={main}
-              alt={`${alt} — image ${active + 1}`}
-              fill
-              sizes="(max-width: 1024px) 100vw, 720px"
-              priority
-              className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-            />
-            <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-caption text-white backdrop-blur-sm">
-              <Expand className="h-3.5 w-3.5" />
-              {hasMultiple ? `${active + 1} / ${count}` : "Agrandir"}
-            </span>
-          </button>
-
-          {hasMultiple ? (
-            <>
-              <button
-                type="button"
-                onClick={goPrev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 shadow-md backdrop-blur-sm transition hover:bg-surface"
-                aria-label="Image précédente"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={goNext}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 shadow-md backdrop-blur-sm transition hover:bg-surface"
-                aria-label="Image suivante"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </>
-          ) : null}
-        </div>
-
+      <div className="grid gap-4 md:grid-cols-[88px_minmax(0,1fr)]">
         {hasMultiple ? (
           <div
-            className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="order-2 flex gap-2 overflow-x-auto md:order-1 md:flex-col md:overflow-visible"
             role="tablist"
             aria-label="Miniatures du produit"
           >
@@ -115,23 +72,64 @@ export function ProductGallery({
                 aria-label={`Voir image ${idx + 1}`}
                 aria-selected={active === idx}
                 className={cn(
-                  "relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-surface-muted transition-all duration-160 sm:h-20 sm:w-20",
-                  active === idx
-                    ? "border-brand-500 ring-2 ring-brand-500/30"
-                    : "border-border hover:border-ink-subtle",
+                  "relative aspect-square w-16 shrink-0 overflow-hidden border-2 bg-surface-muted md:w-full",
+                  active === idx ? "border-ink" : "border-transparent hover:border-border",
                 )}
               >
                 <ProductImage
                   src={img}
                   alt=""
                   fill
-                  sizes="80px"
+                  sizes="88px"
                   className="object-cover"
                 />
               </button>
             ))}
           </div>
         ) : null}
+
+        <div className={cn("relative order-1 md:order-2", !hasMultiple && "md:col-span-2")}>
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="group relative block aspect-[4/5] w-full overflow-hidden bg-surface-muted"
+            aria-label="Agrandir l'image"
+          >
+            <ProductImage
+              src={main}
+              alt={`${alt} — image ${active + 1}`}
+              fill
+              sizes="(max-width: 1024px) 100vw, 720px"
+              priority
+              className="object-cover"
+            />
+            <span className="absolute right-0 top-0 inline-flex items-center gap-1 bg-ink px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.08em] text-surface">
+              <Expand className="h-3.5 w-3.5" />
+              {hasMultiple ? `${active + 1} / ${count}` : "Agrandir"}
+            </span>
+          </button>
+
+          {hasMultiple ? (
+            <>
+              <button
+                type="button"
+                onClick={goPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 border border-ink bg-surface p-2"
+                aria-label="Image précédente"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 border border-ink bg-surface p-2"
+                aria-label="Image suivante"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {lightboxOpen ? (

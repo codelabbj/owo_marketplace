@@ -26,12 +26,13 @@ export function GlobalSearch({ embedded = false }: { embedded?: boolean }) {
           onChangeDebounced={setQuery}
           delay={350}
           ariaLabel="Recherche globale boutique ou produit"
+          compact={embedded}
         />
         {enabled ? (
           <div
             role="listbox"
             aria-label="Résultats de recherche"
-            className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(420px,70vh)] overflow-auto rounded-lg border border-border bg-surface p-3 shadow-card-hover"
+            className="absolute left-0 right-0 top-full z-50 mt-0 max-h-[min(420px,70vh)] overflow-auto border border-ink bg-surface p-3"
           >
             {isFetching && !data ? (
               <div className="flex items-center gap-2 px-2 py-3 text-body-sm text-ink-muted">

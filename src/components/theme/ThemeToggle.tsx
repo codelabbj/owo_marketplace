@@ -39,21 +39,21 @@ export function ThemeToggle() {
   const ActiveIcon = resolved === "dark" ? Moon : Sun;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative h-10">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label="Changer le thème"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface text-ink-muted transition-colors duration-160 hover:bg-surface-subtle hover:text-ink"
+        className="grid h-10 w-10 shrink-0 place-items-center border border-ink bg-surface text-ink transition-colors duration-160 hover:bg-ink hover:text-surface"
       >
         <ActiveIcon className="h-4 w-4" aria-hidden />
       </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-40 mt-2 w-40 overflow-hidden rounded-md border border-border bg-surface shadow-card-hover"
+          className="absolute right-0 top-full z-40 mt-0 w-44 overflow-hidden border border-ink bg-surface"
         >
           {OPTIONS.map(({ value, label, Icon }) => {
             const active = mode === value;

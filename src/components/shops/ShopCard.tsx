@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, Store } from "lucide-react";
+import { ArrowRight, BadgeCheck, MapPin, Package, Store } from "lucide-react";
 import type { ShopSummary } from "@/types/domain";
 import { shouldUseUnoptimizedImage } from "@/lib/utils/images";
 import { cn } from "@/lib/utils/cn";
@@ -13,78 +13,69 @@ export function ShopCard({
   featured?: boolean;
 }) {
   return (
-    <article
+    <Link
+      href={`/${shop.slug}`}
       className={cn(
-        "card relative flex h-full flex-col overflow-hidden p-0",
-        featured && "ring-1 ring-brand-500/40",
+        "group grid items-center gap-4 border-b border-border py-5 hover:bg-[#F7F4EF] dark:hover:bg-surface-muted",
+        featured
+          ? "grid-cols-[64px_minmax(0,1fr)_auto] md:grid-cols-[64px_minmax(0,1fr)_40px] md:gap-[22px] md:py-[22px]"
+          : "grid-cols-[72px_minmax(0,1fr)] md:grid-cols-[72px_minmax(0,1fr)_auto] md:gap-[22px]",
       )}
     >
-      <div className="relative h-28 w-full bg-surface-muted">
-        {shop.coverUrl || shop.logoUrl ? (
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden bg-surface-muted",
+          featured ? "h-16 w-16" : "h-[72px] w-[72px]",
+        )}
+      >
+        {shop.logoUrl || shop.coverUrl ? (
           <Image
-            src={shop.coverUrl || shop.logoUrl!}
+            src={shop.logoUrl || shop.coverUrl!}
             alt=""
             fill
-            sizes="(max-width: 768px) 100vw, 25vw"
-            unoptimized={shouldUseUnoptimizedImage(shop.coverUrl || shop.logoUrl || "")}
+            sizes="72px"
+            unoptimized={shouldUseUnoptimizedImage(shop.logoUrl || shop.coverUrl || "")}
             className="object-cover"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-gradient-to-br from-brand-500/20 to-surface-muted text-ink-subtle">
-            <Store className="h-7 w-7" aria-hidden />
+          <div className="grid h-full w-full place-items-center text-ink-subtle">
+            <Store className="h-6 w-6" aria-hidden />
           </div>
         )}
-        {featured ? (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-brand-500 px-2.5 py-1 text-caption font-semibold text-white shadow-sm">
-            <Sparkles className="h-3 w-3" aria-hidden />
-            En vedette
-          </span>
-        ) : null}
       </div>
-
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start gap-3">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-surface-muted">
-            {shop.logoUrl ? (
-              <Image
-                src={shop.logoUrl}
-                alt=""
-                fill
-                sizes="48px"
-                unoptimized={shouldUseUnoptimizedImage(shop.logoUrl)}
-                className="object-cover"
-              />
-            ) : (
-              <div className="grid h-full w-full place-items-center text-ink-subtle">
-                <Store className="h-4 w-4" aria-hidden />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <h3 className="line-clamp-2 text-h3 text-ink">{shop.name}</h3>
-            {shop.city ? (
-              <p className="text-caption uppercase tracking-wide text-ink-subtle">
-                {shop.city}
-              </p>
-            ) : null}
-          </div>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-display text-[20px] font-bold tracking-[-0.025em]">{shop.name}</span>
+          <span className="mp-verified">
+            <BadgeCheck className="h-3 w-3" />
+            Vérifié
+          </span>
         </div>
-
         {shop.shortDescription ? (
-          <p className="mt-3 line-clamp-2 text-body-sm text-ink-muted">
-            {shop.shortDescription}
-          </p>
+          <p className="mt-1 line-clamp-1 text-[14px] text-ink-muted">{shop.shortDescription}</p>
         ) : null}
-
-        <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-          <span className="text-caption text-ink-muted">
+        <p className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-subtle">
+          {shop.city ? (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {shop.city}
+            </span>
+          ) : null}
+          <span className="inline-flex items-center gap-1">
+            <Package className="h-3 w-3" />
             {shop.productsCount} produit{shop.productsCount > 1 ? "s" : ""}
           </span>
-          <Link href={`/${shop.slug}`} className="btn-outline h-9 px-3 text-body-sm">
-            Voir la boutique
-          </Link>
-        </div>
+        </p>
       </div>
-    </article>
+      {featured ? (
+        <span className="hidden h-10 w-10 items-center justify-center border border-ink md:grid">
+          <ArrowRight className="h-4 w-4" />
+        </span>
+      ) : (
+        <span className="hidden h-10 items-center gap-2 border border-ink px-4 text-[12.5px] font-bold uppercase tracking-[0.04em] md:inline-flex">
+          Voir <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      )}
+    </Link>
   );
 }

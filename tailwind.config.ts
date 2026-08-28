@@ -55,6 +55,10 @@ const config: Config = {
           dark: "#128C7E",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-sans)", "Public Sans", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Archivo", "ui-sans-serif", "sans-serif"],
+      },
       fontSize: {
         "display-xl": ["40px", { lineHeight: "48px", fontWeight: "700" }],
         h1: ["32px", { lineHeight: "40px", fontWeight: "700" }],
@@ -67,9 +71,15 @@ const config: Config = {
         button: ["14px", { lineHeight: "20px", fontWeight: "600" }],
       },
       borderRadius: {
-        md: "10px",
-        lg: "16px",
-        xl: "20px",
+        none: "0px",
+        sm: "0px",
+        DEFAULT: "0px",
+        md: "0px",
+        lg: "0px",
+        xl: "0px",
+        "2xl": "0px",
+        "3xl": "0px",
+        full: "0px",
       },
       transitionDuration: {
         "160": "160ms",

@@ -11,7 +11,10 @@ export function ProductBreadcrumbs({
   productName: string;
 }) {
   return (
-    <nav aria-label="Fil d'Ariane" className="mb-6 text-body-sm text-ink-muted">
+    <nav
+      aria-label="Fil d'Ariane"
+      className="mb-0 border-b border-border py-5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-subtle"
+    >
       <ol className="flex flex-wrap items-center gap-1">
         <li>
           <Link href="/" className="hover:text-ink">

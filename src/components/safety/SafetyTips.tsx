@@ -23,7 +23,7 @@ export function SafetyTips({ compact = false, className, id = "safety-tips" }: S
       <aside
         id={id}
         className={cn(
-          "rounded-lg border border-border bg-surface-subtle px-3 py-3 text-body-sm text-ink-muted",
+          "border border-ink bg-surface-subtle px-3 py-3 text-body-sm text-ink-muted",
           className,
         )}
       >

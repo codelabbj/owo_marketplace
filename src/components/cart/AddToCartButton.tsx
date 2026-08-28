@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { CartItem } from "@/schemas/cart.schema";
 import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils/cn";
@@ -52,10 +52,14 @@ export function AddToCartButton({
         type="button"
         onClick={handleClick}
         disabled={disabled}
-        className={cn("btn-outline", sizeClass)}
+        className={cn(
+          "btn-outline uppercase tracking-[0.04em]",
+          sizeClass,
+          size !== "sm" && "text-[12.5px] font-bold",
+        )}
       >
-        <ShoppingCart className="h-4 w-4" aria-hidden />
-        Ajouter au panier
+        <Plus className="h-3.5 w-3.5" aria-hidden />
+        {size === "lg" ? "Ajouter à ma commande" : "Ajouter"}
       </button>
       {feedback ? (
         <p className="text-caption text-emerald-700 dark:text-emerald-400" role="status">
