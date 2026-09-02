@@ -108,7 +108,7 @@
     @apply badge bg-brand-500 text-white;
   }
   .badge-rupture {
-    @apply badge bg-ink text-surface;
+    @apply inline-flex items-center justify-center bg-red-600 px-3 py-1.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white shadow-[0_2px_8px_rgba(0,0,0,0.25)];
   }
   .badge-new {
     @apply badge bg-emerald-700 text-white;

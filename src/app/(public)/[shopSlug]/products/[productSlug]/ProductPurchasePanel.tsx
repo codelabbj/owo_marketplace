@@ -44,7 +44,7 @@ export function ProductPurchasePanel({
   const variantValid = !hasVariants || (selectedVariant !== null && stockForState > 0);
   const ctaDisabled = !inStockGlobally || !variantValid;
   const disabledReason = !inStockGlobally
-    ? "Produit en rupture de stock"
+    ? undefined
     : hasVariants && !selectedVariant
       ? "Veuillez sélectionner une variante"
       : hasVariants && stockForState <= 0

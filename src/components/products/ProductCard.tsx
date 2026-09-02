@@ -50,8 +50,14 @@ export function ProductCard({
         ) : (
           <div className="grid h-full w-full place-items-center text-ink-subtle">Image indisponible</div>
         )}
-        {formattedPromo ? <span className="badge-promo absolute left-0 top-0">Promo</span> : null}
-        {outOfStock ? <span className="badge-rupture absolute left-0 top-0">Rupture</span> : null}
+        {outOfStock ? (
+          <span className="badge-rupture absolute inset-x-0 top-0 z-10">Rupture</span>
+        ) : formattedPromo ? (
+          <span className="badge-promo absolute left-0 top-0">Promo</span>
+        ) : null}
+        {outOfStock && formattedPromo ? (
+          <span className="badge-promo absolute left-0 top-9">Promo</span>
+        ) : null}
       </Link>
 
       <Link
@@ -84,7 +90,6 @@ export function ProductCard({
         className="mt-auto"
         size="md"
         disabled={outOfStock}
-        disabledReason={outOfStock ? "Produit en rupture" : undefined}
         item={{
           shopSlug,
           shopName,
